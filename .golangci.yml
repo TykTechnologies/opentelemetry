@@ -7,7 +7,6 @@ linters:
     - errcheck
     - gocritic
     - gofmt
-    - gofumpt
     - goimports
     - govet
     - lll
