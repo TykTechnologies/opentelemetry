@@ -3,8 +3,9 @@ package trace
 import (
 	"context"
 	"fmt"
-	"opentelemetry/config"
 	"time"
+
+	"opentelemetry/config"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"

@@ -3,8 +3,9 @@ package trace
 import (
 	"context"
 	"fmt"
-	"opentelemetry/config"
 	"testing"
+
+	"opentelemetry/config"
 
 	"github.com/stretchr/testify/assert"
 )
