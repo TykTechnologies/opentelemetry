@@ -25,7 +25,7 @@ jobs:
           go-version: 1.19
 
       - name: Verify dependencies
-        run: go mod verify
+        run: go work sync
 
       - name: Build
         run: task build
