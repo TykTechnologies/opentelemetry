@@ -12,6 +12,7 @@ import (
 	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/TykTechnologies/opentelemetry/trace"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func main() {
@@ -47,7 +48,12 @@ func main() {
 		_, span := tracer.Start(r.Context(), "main")
 		defer span.End()
 
-		log.Println("request received:", r.Header)
+		span.AddEvent("test event")
+		attributes := []attribute.KeyValue{
+			attribute.String("test-string-attr", "value"),
+			attribute.Int("test-int-attr", 1),
+		}
+		span.SetAttributes(attributes...)
 
 		response := map[string]interface{}{
 			"status": "success",
