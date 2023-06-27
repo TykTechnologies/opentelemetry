@@ -1,4 +1,4 @@
-module opentelemetry
+module github.com/TykTechnologies/opentelemetry
 
 go 1.19
 

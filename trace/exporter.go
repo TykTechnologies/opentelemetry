@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"opentelemetry/config"
+	"github.com/TykTechnologies/opentelemetry/config"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
