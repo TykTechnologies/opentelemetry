@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"opentelemetry/config"
+	"github.com/TykTechnologies/opentelemetry/config"
 
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"opentelemetry/config"
+	"github.com/TykTechnologies/opentelemetry/config"
 
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
