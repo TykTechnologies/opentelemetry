@@ -4,4 +4,4 @@ tasks:
   install-tracetest:
     cmds:
       - echo "Installing tracetest on linux"
-      - curl -L https://raw.githubusercontent.com/kubeshop/tracetest/main/install-cli.sh | bash
+      - curl -L https://raw.githubusercontent.com/kubeshop/tracetest/v0.11.15/install-cli.sh | bash

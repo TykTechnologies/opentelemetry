@@ -16,6 +16,7 @@ tasks:
     - task: helper:install-tracetest
     - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml up -d
     - tracetest configure -g --endpoint http://localhost:11633
+    - tracetest version
 
   e2e-test: 
     cmds:
