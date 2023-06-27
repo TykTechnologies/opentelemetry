@@ -10,12 +10,23 @@ tasks:
   test:
     cmds:
       - go test -v -race -vet=off ./...
-  e2e:
+
+  e2e-setup:
     cmds:
-     - task: helper:install-tracetest
-     - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml up -d
+    - task: helper:install-tracetest
+    - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml up -d
+    - tracetest configure -g --endpoint http://localhost:11633
+
+  e2e-test: 
+    cmds:
      - tracetest test run -d ./e2e/basic/tests/example.yml -w -o pretty
 
-  stop:
+  e2e-stop:
     cmds:
       - docker compose  -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml down --remove-orphans
+
+  e2e:
+    cmds:
+      - task: e2e-setup
+      - task: e2e-test
+      - task: e2e-stop

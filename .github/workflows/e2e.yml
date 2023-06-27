@@ -22,8 +22,10 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.19  
-      - name: Execute e2e
-        run: task e2e
+      - name: Setup e2e
+        run: task e2e-setup
+      - name: Run e2e tests
+        run: task e2e-test
       - name: Stop e2e
         if: always()
-        run: task stop
+        run: task e2e-stop
