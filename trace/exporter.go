@@ -31,7 +31,7 @@ func exporterFactory(ctx context.Context, cfg config.OpenTelemetry) (sdktrace.Sp
 		return nil, fmt.Errorf("invalid exporter type: %s", cfg.Exporter)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(cfg.ConnectionTimeout))
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(cfg.ConnectionTimeout)*time.Second)
 	defer cancel()
 	// Create the trace exporter
 	return otlptrace.New(ctx, client)
@@ -42,13 +42,13 @@ func newGRPCClient(ctx context.Context, cfg config.OpenTelemetry) otlptrace.Clie
 		otlptracegrpc.WithEndpoint(cfg.Endpoint),
 		otlptracegrpc.WithInsecure(),
 		otlptracegrpc.WithDialOption(grpc.WithBlock()),
-		otlptracegrpc.WithTimeout(time.Duration(cfg.ConnectionTimeout)),
+		otlptracegrpc.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),
 	)
 }
 
 func newHTTPClient(ctx context.Context, cfg config.OpenTelemetry) otlptrace.Client {
 	return otlptracehttp.NewClient(
 		otlptracehttp.WithEndpoint(cfg.Endpoint),
-		otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)),
+		otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),
 	)
 }
