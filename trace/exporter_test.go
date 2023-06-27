@@ -39,6 +39,8 @@ func Test_NewHTTPClient(t *testing.T) {
 }
 
 func Test_ExporterFactory(t *testing.T) {
+	t.Parallel()
+
 	tcs := []struct {
 		name        string
 		givenConfig config.OpenTelemetry
@@ -66,7 +68,6 @@ func Test_ExporterFactory(t *testing.T) {
 				}))
 
 				return server.URL, server.Close
-
 			},
 			expectedErr: nil,
 		},
@@ -93,7 +94,6 @@ func Test_ExporterFactory(t *testing.T) {
 				}()
 
 				return lis.Addr().String(), s.Stop
-
 			},
 			expectedErr: nil,
 		},
