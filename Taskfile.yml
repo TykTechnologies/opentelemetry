@@ -1,0 +1,21 @@
+version: '3'
+
+includes:
+  helper: ./e2e/helper_{{OS}}.yml
+
+tasks:
+  build:
+    cmds:
+      - go build -v ./...
+  test:
+    cmds:
+      - go test -v -race -vet=off ./...
+  e2e:
+    cmds:
+     - task: helper:install-tracetest
+     - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml up -d
+     - tracetest test run -d ./e2e/basic/tests/example.yml -w -o pretty
+
+  stop:
+    cmds:
+      - docker compose  -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml down --remove-orphans

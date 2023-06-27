@@ -1,0 +1,13 @@
+version: '3'
+
+includes:
+  helper: ./helper_{{OS}}.yml
+
+tasks:
+  build:
+    cmds:
+      - go build -o e2e-basic
+  run:
+    cmds:
+      - task: build
+      - cmd: ./e2e-basic

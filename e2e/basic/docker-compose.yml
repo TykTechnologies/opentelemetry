@@ -1,0 +1,11 @@
+version: '3'
+services:
+  basic:
+    build:
+      context: ../../
+      dockerfile: ./e2e/basic/Dockerfile
+    ports:
+      - 8080:8080
+networks:
+    default:
+        name: _default

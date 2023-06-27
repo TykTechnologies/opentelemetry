@@ -1,0 +1,27 @@
+type: Test
+spec:
+  id: e2e-basic-test
+  name: e2e-basic-test
+  description: e2e-basic-test
+  trigger:
+    type: http
+    httpRequest:
+      url: host.docker.internal:8080/test
+      method: GET
+      headers:
+      - key: Content-Type
+        value: application/json
+  specs:
+  - name: Check main span - http.method and http.scheme
+    selector: span[tracetest.span.type="http" name="get_test"]
+    assertions:
+    - attr:http.scheme = "http"
+    - attr:http.method = "GET"
+  - name: Check main span - http.status_code
+    selector: span[tracetest.span.type="http" name="get_test"]
+    assertions:
+    - attr:http.status_code = 200
+  - name: Check if http span has one child span
+    selector: span[tracetest.span.type="http"]
+    assertions:
+    - attr:tracetest.selected_spans.count = 1

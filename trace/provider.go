@@ -5,18 +5,23 @@ import (
 	"fmt"
 
 	"github.com/TykTechnologies/opentelemetry/config"
-
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 type Provider interface {
 	Shutdown(context.Context) error
-	Tracer() *sdktrace.TracerProvider
+	Tracer() Tracer
 }
+
+type Tracer = oteltrace.Tracer
 
 type traceProvider struct {
 	traceProvider *sdktrace.TracerProvider
+
+	cfg config.OpenTelemetry
 }
 
 // NewProvider creates a new trace provider with the given configuration
@@ -48,9 +53,11 @@ func NewProvider(ctx context.Context, cfg config.OpenTelemetry) (Provider, error
 	)
 
 	otel.SetTracerProvider(tracerProvider)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return &traceProvider{
 		traceProvider: tracerProvider,
+		cfg:           cfg,
 	}, nil
 }
 
@@ -58,6 +65,6 @@ func (tp *traceProvider) Shutdown(ctx context.Context) error {
 	return tp.traceProvider.Shutdown(ctx)
 }
 
-func (tp *traceProvider) Tracer() *sdktrace.TracerProvider {
-	return tp.traceProvider
+func (tp *traceProvider) Tracer() Tracer {
+	return tp.traceProvider.Tracer(tp.cfg.ResourceName)
 }

@@ -41,6 +41,7 @@ func newGRPCClient(ctx context.Context, cfg config.OpenTelemetry) otlptrace.Clie
 	return otlptracegrpc.NewClient(
 		otlptracegrpc.WithEndpoint(cfg.Endpoint),
 		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithHeaders(cfg.Headers),
 		otlptracegrpc.WithDialOption(grpc.WithBlock()),
 		otlptracegrpc.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),
 	)
@@ -50,5 +51,7 @@ func newHTTPClient(ctx context.Context, cfg config.OpenTelemetry) otlptrace.Clie
 	return otlptracehttp.NewClient(
 		otlptracehttp.WithEndpoint(cfg.Endpoint),
 		otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),
+		otlptracehttp.WithHeaders(cfg.Headers),
+		otlptracehttp.WithInsecure(),
 	)
 }
