@@ -19,7 +19,8 @@ type Provider interface {
 type Tracer = oteltrace.Tracer
 
 type traceProvider struct {
-	traceProvider *sdktrace.TracerProvider
+	traceProvider      oteltrace.TracerProvider
+	providerShutdownFn func(context.Context) error
 
 	cfg config.OpenTelemetry
 }
@@ -28,6 +29,14 @@ type traceProvider struct {
 // The trace provider is responsible for creating spans and sending them to the exporter
 // it also register the trace provider as a global trace provider, and connects the	trace provider to the exporter
 func NewProvider(ctx context.Context, cfg config.OpenTelemetry) (Provider, error) {
+	if !cfg.Enabled {
+		return &traceProvider{
+			traceProvider:      oteltrace.NewNoopTracerProvider(),
+			providerShutdownFn: nil,
+			cfg:                cfg,
+		}, nil
+	}
+
 	resource, err := resourceFactory(ctx, cfg.ResourceName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create resource: %w", err)
@@ -56,13 +65,18 @@ func NewProvider(ctx context.Context, cfg config.OpenTelemetry) (Provider, error
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return &traceProvider{
-		traceProvider: tracerProvider,
-		cfg:           cfg,
+		traceProvider:      tracerProvider,
+		providerShutdownFn: tracerProvider.Shutdown,
+		cfg:                cfg,
 	}, nil
 }
 
 func (tp *traceProvider) Shutdown(ctx context.Context) error {
-	return tp.traceProvider.Shutdown(ctx)
+	if tp.providerShutdownFn == nil {
+		return nil
+	}
+
+	return tp.providerShutdownFn(ctx)
 }
 
 func (tp *traceProvider) Tracer() Tracer {

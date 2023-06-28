@@ -14,18 +14,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	HTTPEXPORTER = "http"
-	GRPCEXPORTER = "grpc"
-)
-
 func exporterFactory(ctx context.Context, cfg config.OpenTelemetry) (sdktrace.SpanExporter, error) {
 	var client otlptrace.Client
 
 	switch cfg.Exporter {
-	case GRPCEXPORTER:
+	case config.GRPCEXPORTER:
 		client = newGRPCClient(ctx, cfg)
-	case HTTPEXPORTER:
+	case config.HTTPEXPORTER:
 		client = newHTTPClient(ctx, cfg)
 	default:
 		return nil, fmt.Errorf("invalid exporter type: %s", cfg.Exporter)
