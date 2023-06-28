@@ -69,7 +69,6 @@ func NewProvider(ctx context.Context, cfg config.OpenTelemetry) (Provider, error
 
 	// set global otel trace provider
 	otel.SetTracerProvider(tracerProvider)
-	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	// set the global otel context propagator
 	otel.SetTextMapPropagator(propagation.TraceContext{})
