@@ -1,38 +1,62 @@
-# tyk-templates
+# Tyk OpenTelemetry Go Library
 
-This is a Template repo for all your template needs.
-You can use it as a base tempalte to create your new repo or copy basic important files to add to your repo.
+This repository contains Tyk's OpenTelemetry library. It provides an abstraction layer for working with OpenTelemetry, making it easier to instrument, generate, collect, and export telemetry data. The library is designed to be imported and reused across main Tyk's components.
 
-## Current templates in the repo
+## Getting Started
 
-1. [Contribution guidelines](./CONTRIBUTING.md) 
-2. [PR template](./.github/pull_request_template.md)
-3. [Bug report template](./.github/ISSUE_TEMPLATE/bug_report.md)
-4. [Feature request template](./.github/ISSUE_TEMPLATE/feature_request.md) 
-5. [Contributor License Agreement](https://github.com/TykTechnologies/tyk/blob/master/CLA.md) - This will enforce your contributors to sign the CLA on the first time they submit a PR.
-6. [License](./LICENSE)  *from tyk-gateway*
-7. [Default Repo README](./.github/README-template.md), which resides in `/.github`
+To start using the Tyk OpenTelemetry Go library, you can import this library as a dependency into your Go application.
 
+```
+go get github.com/TykTechnologies/opentelemetry
+```
 
-## How to use this repo
-### For a new repo
-  - Create your repository using this repo as a template ([GitHub instruction](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template#creating-a-repository-from-a-template)).
-  - Rename the file `./.github/README-template.md` to `./.github/README.md` (remove the `-template` part) to get GitHub to display this README
-  - Update `./.github/README.md` with the relevant content for your repo
+Ensure that you have Go installed on your machine.
 
-### For an existing repo
-Please make sure your repo has all the required templates which are defined in the [section below](#current-template-in-the-repo) by simply copying the relevant templates or add content that is in the template but not in your repo files.
+## Compiling the Project
 
+This repository includes a Taskfile that allows you to build the project to check everything is working as expected.
+It will also build the "basic" repository, which is a simple application that uses the Tyk OpenTelemetry library to test it.
 
-## Asking users To sign CLA on submitting a pull request (for existing repo)
-For existing repo you can add the feature that ask contributors to sign the CLA on submitting a pull request by copying the [CLA file](.github/workflows/cla.yml) to your `.github/workflows/cla.yml` folder.
+To build the project, use the build task:
 
+```
+task build
+```
 
-## Backlog / WIP
-1. Common GitHub workflows you use across all the repo (e.g. spell checker)
-2. Make releases to this repo.
+## Running Tests
 
+The Taskfile also includes tasks for running unit tests.
 
-## Adjustments / Changes / Updates
-Please feel free to submit PRs, bugs and feature request when you think the templates needs fix or improvement.
+```
+task test
+```
 
+This command will run all unit tests in the repository.
+
+### End-to-End (E2E) Testing
+
+The repository provides several tasks to set up and run e2e tests.
+
+1. **e2e-setup:** This task starts the basic application, the tracetest, and the otel-collector for e2e testing. It can be run with the following command:
+
+```
+task e2e-setup
+```
+
+2. **e2e-test:** This task runs the e2e test scenarios with tracetest:
+
+```
+task e2e-test
+```
+
+3. **e2e-stop:** After you've run the e2e tests, you can stop the e2e environment with this task:
+
+```
+task e2e-stop
+```
+
+4. **e2e**: This task combines all the previous steps (setup, run, and clean) to install, run, and clean the e2e tests:
+
+```
+task e2e
+```
