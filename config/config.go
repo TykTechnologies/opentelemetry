@@ -26,6 +26,7 @@ const (
 	GRPCEXPORTER = "grpc"
 )
 
+// SetDefaults sets the default values for the OpenTelemetry config.
 func (c *OpenTelemetry) SetDefaults() {
 	if !c.Enabled {
 		return
