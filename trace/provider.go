@@ -37,15 +37,23 @@ func NewProvider(ctx context.Context, cfg config.OpenTelemetry) (Provider, error
 		}, nil
 	}
 
+	// set the config defaults
+	cfg.SetDefaults()
+
+	// create the resource
 	resource, err := resourceFactory(ctx, cfg.ResourceName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create resource: %w", err)
 	}
 
+	// create the exporter - here's where connecting to the collector happens
 	exporter, err := exporterFactory(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create exporter: %w", err)
 	}
+
+	// create the span processor - this is what will send the spans to the exporter.
+	spanProcesor := spanProcessorFactory(exporter)
 
 	// Create the trace provider
 	// The trace provider will use the resource and exporter created previously
@@ -53,15 +61,16 @@ func NewProvider(ctx context.Context, cfg config.OpenTelemetry) (Provider, error
 	// The trace provider must be registered as a global trace provider
 	// so that any other package can use it
 
-	spanProcesor := spanProcessorFactory(exporter)
-
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(resource),
 		sdktrace.WithSpanProcessor(spanProcesor),
 	)
 
+	// set global otel trace provider
 	otel.SetTracerProvider(tracerProvider)
+
+	// set the global otel context propagator
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return &traceProvider{
