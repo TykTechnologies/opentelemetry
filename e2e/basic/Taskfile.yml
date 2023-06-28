@@ -1,0 +1,10 @@
+version: '3'
+
+tasks:
+  build:
+    cmds:
+      - go build -o e2e-basic
+  run:
+    cmds:
+      - task: build
+      - cmd: ./e2e-basic

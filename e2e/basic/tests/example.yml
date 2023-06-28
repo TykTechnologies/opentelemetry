@@ -1,0 +1,29 @@
+type: Test
+spec:
+  id: e2e-basic-test
+  name: e2e-basic-test
+  description: e2e-basic-test
+  trigger:
+    type: http
+    httpRequest:
+      url: basic:8080/test
+      method: GET
+      headers:
+      - key: Content-Type
+        value: application/json
+  specs:
+  - name: Check main span - http.method, http.scheme and http.status_code
+    selector: span[tracetest.span.type="http" name="get_test"]
+    assertions:
+    - attr:http.scheme = "http"
+    - attr:http.method = "GET"
+    - attr:http.status_code = 200
+  - name: Check if http span has one child span
+    selector: span[tracetest.span.type="http"]
+    assertions:
+    - attr:tracetest.selected_spans.count = 1
+  - name: Check main span custom attributes
+    selector: span[tracetest.span.type="general" name="main"]
+    assertions:
+    - attr:test-string-attr   =   "value"
+    - attr:test-int-attr  =  1

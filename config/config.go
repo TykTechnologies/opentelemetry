@@ -13,7 +13,7 @@ type OpenTelemetry struct {
 	Headers map[string]string `json:"headers"`
 	// connection_timeout is the timeout for establishing a connection to the collector.
 	ConnectionTimeout int `json:"connection_timeout"`
-	// resource_name is the name of the resource that will be used to identify the service.
+	// resource_name is the name of the resource that will be used to identify the resource.
 	ResourceName string `json:"resource_name"`
 }
 
