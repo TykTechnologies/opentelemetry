@@ -12,6 +12,42 @@ go get github.com/TykTechnologies/opentelemetry
 
 Ensure that you have Go installed on your machine.
 
+```
+import (
+    "context"
+	"os"
+	"os/signal"
+	"syscall"
+    "github.com/TykTechnologies/opentelemetry/config"
+	"github.com/TykTechnologies/opentelemetry/trace"
+)
+
+func main(){
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
+
+	cfg := config.OpenTelemetry{
+		Enabled:           true,
+		Exporter:          "grpc",
+		Endpoint:          "otel-collector:4317",
+		ConnectionTimeout: 10,
+		ResourceName:      "e2e-basic",
+	}
+
+	provider, err := trace.NewProvider(ctx, cfg)
+	if err != nil {
+		log.Printf("error on otel provider init %s", err.Error())
+		return
+	}
+	defer provider.Shutdown(ctx)
+
+	tracer := provider.Tracer()
+
+	_, span := tracer.Start(ctx, "span-name")
+	defer span.End()
+}
+```
+
 ## Compiling the Project
 
 This repository includes a Taskfile that allows you to build the project to check everything is working as expected.
