@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/TykTechnologies/opentelemetry/trace"
@@ -35,12 +36,6 @@ func main() {
 		return
 	}
 
-	defer func() {
-		if err := provider.Shutdown(ctx); err != nil {
-			log.Fatal("failed to shutdown TracerProvider: %w", err)
-		}
-	}()
-
 	tracer := provider.Tracer()
 
 	mux := http.NewServeMux()
@@ -67,9 +62,29 @@ func main() {
 		}
 	}), "get_test"))
 
-	log.Printf("server listening on port %s", ":8080")
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: mux,
+	}
 
-	if err := http.ListenAndServe(":8080", mux); err != nil {
-		log.Printf("error on listen and serve %s", err.Error())
+	go func(cfg config.OpenTelemetry) {
+		<-ctx.Done() // Blocks here until ctx is cancelled
+		newCtx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ConnectionTimeout)*time.Second)
+		defer cancel()
+		// Shutdown provider (with a new context)
+		if err := provider.Shutdown(newCtx); err != nil {
+			log.Fatal("failed to shutdown TracerProvider: %w", err)
+		}
+
+		if err := srv.Shutdown(newCtx); err != nil {
+			// Error from closing listeners, or context timeout:
+			log.Printf("HTTP server Shutdown: %v", err)
+		}
+	}(cfg)
+
+	log.Printf("server listening on port %s", ":8080")
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		// Error starting or closing listener:
+		log.Printf("HTTP server ListenAndServe: %v", err)
 	}
 }
