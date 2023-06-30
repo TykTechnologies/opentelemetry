@@ -63,10 +63,56 @@ func Test_NewSimpleSpanProcessor(t *testing.T) {
 	assert.Equal(t, wantTraceID, gotTraceID)
 }
 
+func Test_NewBatchSpanProcessor(t *testing.T) {
+	t.Parallel()
+
+	// Create a new trace provider
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
+	// Create a new exporter
+	te := testExporter{}
+
+	// create span and trace ids
+	wantTraceID, err := trace.TraceIDFromHex("01020304050607080102040810203040")
+	assert.Nil(t, err)
+
+	spanID, err := trace.SpanIDFromHex("0102040810203040")
+	assert.Nil(t, err)
+
+	// Create a new span processor
+	processor := newBatchSpanProcessor(&te)
+	assert.NotNil(t, processor)
+
+	// Register the span processor with the trace provider
+	tp.RegisterSpanProcessor(processor)
+
+	// Create a new span
+	startTestSpan2(t, tp, spanID, wantTraceID).End()
+	processor.ForceFlush(context.Background()) // Force flush to ensure spans are exported
+	assert.Equal(t, 1, len(te.spans))
+
+	gotTraceID := te.spans[0].SpanContext().TraceID()
+
+	assert.Equal(t, wantTraceID, gotTraceID)
+}
+
 func startTestSpan(t *testing.T, tp trace.TracerProvider, sid trace.SpanID, tid trace.TraceID) trace.Span {
 	t.Helper()
 
 	tr := tp.Tracer("SimpleSpanProcessor")
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: 0x1,
+	})
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	_, span := tr.Start(ctx, "OnEnd")
+	return span
+}
+
+func startTestSpan2(t *testing.T, tp trace.TracerProvider, sid trace.SpanID, tid trace.TraceID) trace.Span {
+	t.Helper()
+
+	tr := tp.Tracer("SimpleBatchProcessor")
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tid,
 		SpanID:     sid,
