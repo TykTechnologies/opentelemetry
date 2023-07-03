@@ -1,12 +1,11 @@
 package trace
 
 import (
-	"github.com/TykTechnologies/opentelemetry/config"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func spanProcessorFactory(cfg config.OpenTelemetry, exporter sdktrace.SpanExporter) sdktrace.SpanProcessor {
-	switch cfg.SpanProcessorType {
+func spanProcessorFactory(spanProcessorType string, exporter sdktrace.SpanExporter) sdktrace.SpanProcessor {
+	switch spanProcessorType {
 	case "simple":
 		return newSimpleSpanProcessor(exporter)
 	default:

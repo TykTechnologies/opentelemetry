@@ -94,7 +94,6 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 		gotTraceID := te.spans[5].SpanContext().TraceID()
 		assert.Equal(t, wantTraceID, gotTraceID)
 	})
-
 }
 
 func prepareTestProvider(t *testing.T) (*sdktrace.TracerProvider, trace.TraceID, trace.SpanID) {
@@ -113,7 +112,11 @@ func prepareTestProvider(t *testing.T) (*sdktrace.TracerProvider, trace.TraceID,
 	return tp, wantTraceID, spanID
 }
 
-func startTestSpan(t *testing.T, tp trace.TracerProvider, sid trace.SpanID, tid trace.TraceID, numberOfTraces int) []trace.Span {
+func startTestSpan(t *testing.T,
+	tp trace.TracerProvider,
+	sid trace.SpanID,
+	tid trace.TraceID,
+	numberOfTraces int) []trace.Span {
 	t.Helper()
 
 	tr := tp.Tracer("SpanProcessor")
@@ -124,6 +127,7 @@ func startTestSpan(t *testing.T, tp trace.TracerProvider, sid trace.SpanID, tid 
 	})
 
 	response := make([]trace.Span, numberOfTraces)
+
 	for i := 0; i < numberOfTraces; i++ {
 		ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
 		_, span := tr.Start(ctx, "OnEnd"+strconv.Itoa(i))
