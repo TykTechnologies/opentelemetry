@@ -3,6 +3,7 @@ package trace
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/otel"
@@ -22,7 +23,13 @@ type traceProvider struct {
 	traceProvider      oteltrace.TracerProvider
 	providerShutdownFn func(context.Context) error
 
-	cfg config.OpenTelemetry
+	cfg    *config.OpenTelemetry
+	logger Logger
+}
+
+type Logger interface {
+	Info(args ...interface{})
+	Error(args ...interface{})
 }
 
 // NewProvider creates a new trace provider with the given configuration
@@ -33,7 +40,7 @@ func NewProvider(ctx context.Context, cfg config.OpenTelemetry) (Provider, error
 		return &traceProvider{
 			traceProvider:      oteltrace.NewNoopTracerProvider(),
 			providerShutdownFn: nil,
-			cfg:                cfg,
+			cfg:                &cfg,
 		}, nil
 	}
 
@@ -66,17 +73,18 @@ func NewProvider(ctx context.Context, cfg config.OpenTelemetry) (Provider, error
 		sdktrace.WithResource(resource),
 		sdktrace.WithSpanProcessor(spanProcesor),
 	)
-
 	// set global otel trace provider
 	otel.SetTracerProvider(tracerProvider)
 
 	// set the global otel context propagator
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
+	errHandler := &errHandler{}
+	otel.SetErrorHandler(errHandler)
 	return &traceProvider{
 		traceProvider:      tracerProvider,
 		providerShutdownFn: tracerProvider.Shutdown,
-		cfg:                cfg,
+		cfg:                &cfg,
 	}, nil
 }
 
@@ -85,9 +93,53 @@ func (tp *traceProvider) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(tp.cfg.ConnectionTimeout)*time.Second)
+	defer cancel()
+
 	return tp.providerShutdownFn(ctx)
 }
 
 func (tp *traceProvider) Tracer() Tracer {
 	return tp.traceProvider.Tracer(tp.cfg.ResourceName)
+}
+
+type Option interface {
+	Apply(*traceProvider) error
+}
+
+type opts struct {
+	apply func(*traceProvider) error
+}
+
+func (o *opts) Apply(tp *traceProvider) error {
+	return o.apply(tp)
+}
+
+func WithConfig(cfg config.OpenTelemetry) Option {
+	return &opts{
+		apply: func(tp *traceProvider) error {
+			tp.cfg = &cfg
+			return nil
+		},
+	}
+}
+
+func WithLogger(logger Logger) Option {
+	return &opts{
+		apply: func(tp *traceProvider) error {
+			tp.logger = logger
+			return nil
+		},
+	}
+}
+
+type errHandler struct {
+	err error
+}
+
+func (er *errHandler) Handle(err error) {
+	fmt.Println("aca")
+	if err != nil {
+		fmt.Println("ERrrrrrrrr")
+	}
 }
