@@ -19,6 +19,10 @@ type OpenTelemetry struct {
 	// resource_name is the name of the resource that will be used to identify the resource.
 	// Defaults to "tyk"
 	ResourceName string `json:"resource_name"`
+	// span_processor_type is the type of the span processor to use.
+	// Valid values are "simple" or "batch".
+	// Defaults to "batch"
+	SpanProcessorType string `json:"span_processor_type"`
 }
 
 const (
@@ -46,5 +50,9 @@ func (c *OpenTelemetry) SetDefaults() {
 
 	if c.ResourceName == "" {
 		c.ResourceName = "tyk"
+	}
+
+	if c.SpanProcessorType == "" {
+		c.SpanProcessorType = "batch"
 	}
 }

@@ -11,7 +11,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"google.golang.org/grpc"
 )
 
 func exporterFactory(ctx context.Context, cfg config.OpenTelemetry) (sdktrace.SpanExporter, error) {
@@ -37,8 +36,6 @@ func newGRPCClient(ctx context.Context, cfg config.OpenTelemetry) otlptrace.Clie
 		otlptracegrpc.WithEndpoint(cfg.Endpoint),
 		otlptracegrpc.WithInsecure(),
 		otlptracegrpc.WithHeaders(cfg.Headers),
-		otlptracegrpc.WithDialOption(grpc.WithBlock()),
-		otlptracegrpc.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),
 	)
 }
 
