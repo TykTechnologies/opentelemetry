@@ -22,7 +22,7 @@ func main() {
 
 	cfg := config.OpenTelemetry{
 		Enabled:           true,
-		Exporter:          "http",
+		Exporter:          "grpc",
 		Endpoint:          "otel-collector:4317",
 		ConnectionTimeout: 10,
 		ResourceName:      "e2e-basic",

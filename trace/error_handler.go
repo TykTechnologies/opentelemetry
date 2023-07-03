@@ -12,6 +12,12 @@ func (eh *errHandler) Handle(err error) {
 	}
 }
 
+// Logger represents the internal library logger used for error and info messages
+type Logger interface {
+	Info(args ...interface{})
+	Error(args ...interface{})
+}
+
 type noopLogger struct{}
 
 func (n *noopLogger) Error(args ...interface{}) {}

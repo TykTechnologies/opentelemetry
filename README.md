@@ -34,7 +34,7 @@ func main(){
 		ResourceName:      "e2e-basic",
 	}
 
-	provider, err := trace.NewProvider(ctx, cfg)
+	provider, err := trace.NewProvider(trace.WithContext(ctx), trace.WithConfig(&cfg))
 	if err != nil {
 		log.Printf("error on otel provider init %s", err.Error())
 		return

@@ -12,8 +12,12 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
+// Provider is the interface that wraps the basic methods of a trace provider.
+// If missconfigured or disabled, the provider will return a noop tracer
 type Provider interface {
+	// Shutdown execute the underlying exporter shutdown function
 	Shutdown(context.Context) error
+	// Tracer returns a tracer with pre-configured name. It's used to create spans.
 	Tracer() Tracer
 }
 
@@ -29,14 +33,24 @@ type traceProvider struct {
 	ctx context.Context
 }
 
-type Logger interface {
-	Info(args ...interface{})
-	Error(args ...interface{})
-}
+/*
+	 NewProvider creates a new trace provider with the given options
+	 The trace provider is responsible for creating spans and sending them to the exporter
 
-// NewProvider creates a new trace provider with the given configuration
-// The trace provider is responsible for creating spans and sending them to the exporter
-// it also register the trace provider as a global trace provider, and connects the	trace provider to the exporter
+	 Example
+		provider, err := trace.NewProvider(
+			trace.WithContext(context.Background()),
+			trace.WithConfig(&config.OpenTelemetry{
+				Enabled:  true,
+				Exporter: "grpc",
+				Endpoint: "localhost:4317",
+			}),
+			trace.WithLogger(logrus.New().WithField("component", "tyk")),
+		)
+		if err != nil {
+			panic(err)
+		}
+*/
 func NewProvider(opts ...Option) (Provider, error) {
 	provider := &traceProvider{
 		traceProvider:      oteltrace.NewNoopTracerProvider(),
@@ -102,6 +116,8 @@ func NewProvider(opts ...Option) (Provider, error) {
 	otel.SetErrorHandler(&errHandler{
 		logger: provider.logger,
 	})
+
+	provider.logger.Info("trace provider initialized successfully")
 
 	return provider, nil
 }
