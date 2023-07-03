@@ -86,7 +86,7 @@ func Test_Shutdown(t *testing.T) {
 				defer teardown()
 			}
 
-			provider, err := NewProvider(WithContext(ctx), WithConfig(*tc.givenCfg))
+			provider, err := NewProvider(WithContext(ctx), WithConfig(tc.givenCfg))
 			assert.Nil(t, err)
 			assert.NotNil(t, provider)
 
@@ -140,7 +140,7 @@ func Test_Tracer(t *testing.T) {
 			}
 
 			// first check if we are setting the internal trace provider
-			provider, err := NewProvider(WithContext(ctx), WithConfig(*tc.givenCfg))
+			provider, err := NewProvider(WithContext(ctx), WithConfig(tc.givenCfg))
 			assert.Nil(t, err)
 			assert.NotNil(t, provider)
 

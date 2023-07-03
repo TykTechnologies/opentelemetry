@@ -19,10 +19,10 @@ func (o *opts) apply(tp *traceProvider) {
 }
 
 // WithConfig sets the config for the trace provider
-func WithConfig(cfg config.OpenTelemetry) Option {
+func WithConfig(cfg *config.OpenTelemetry) Option {
 	return &opts{
 		fn: func(tp *traceProvider) {
-			tp.cfg = &cfg
+			tp.cfg = cfg
 		},
 	}
 }

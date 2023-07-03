@@ -52,7 +52,7 @@ func Test_WithConfig(t *testing.T) {
 	}
 	tp := &traceProvider{}
 
-	WithConfig(cfg).apply(tp)
+	WithConfig(&cfg).apply(tp)
 
 	assert.NotNil(t, tp.cfg)
 	assert.IsType(t, cfg, *tp.cfg)
