@@ -13,7 +13,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func exporterFactory(ctx context.Context, cfg config.OpenTelemetry) (sdktrace.SpanExporter, error) {
+func exporterFactory(ctx context.Context, cfg *config.OpenTelemetry) (sdktrace.SpanExporter, error) {
 	var client otlptrace.Client
 
 	switch cfg.Exporter {
@@ -31,7 +31,7 @@ func exporterFactory(ctx context.Context, cfg config.OpenTelemetry) (sdktrace.Sp
 	return otlptrace.New(ctx, client)
 }
 
-func newGRPCClient(ctx context.Context, cfg config.OpenTelemetry) otlptrace.Client {
+func newGRPCClient(ctx context.Context, cfg *config.OpenTelemetry) otlptrace.Client {
 	return otlptracegrpc.NewClient(
 		otlptracegrpc.WithEndpoint(cfg.Endpoint),
 		otlptracegrpc.WithInsecure(),
@@ -39,7 +39,7 @@ func newGRPCClient(ctx context.Context, cfg config.OpenTelemetry) otlptrace.Clie
 	)
 }
 
-func newHTTPClient(ctx context.Context, cfg config.OpenTelemetry) otlptrace.Client {
+func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) otlptrace.Client {
 	return otlptracehttp.NewClient(
 		otlptracehttp.WithEndpoint(cfg.Endpoint),
 		otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),

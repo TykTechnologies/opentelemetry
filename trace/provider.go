@@ -25,6 +25,8 @@ type traceProvider struct {
 
 	cfg    *config.OpenTelemetry
 	logger Logger
+
+	ctx context.Context
 }
 
 type Logger interface {
@@ -35,32 +37,44 @@ type Logger interface {
 // NewProvider creates a new trace provider with the given configuration
 // The trace provider is responsible for creating spans and sending them to the exporter
 // it also register the trace provider as a global trace provider, and connects the	trace provider to the exporter
-func NewProvider(ctx context.Context, cfg config.OpenTelemetry) (Provider, error) {
-	if !cfg.Enabled {
-		return &traceProvider{
-			traceProvider:      oteltrace.NewNoopTracerProvider(),
-			providerShutdownFn: nil,
-			cfg:                &cfg,
-		}, nil
+func NewProvider(opts ...Option) (Provider, error) {
+	provider := &traceProvider{
+		traceProvider:      oteltrace.NewNoopTracerProvider(),
+		providerShutdownFn: nil,
+		logger:             &noopLogger{},
+		cfg:                &config.OpenTelemetry{},
+		ctx:                context.Background(),
 	}
 
-	// set the config defaults
-	cfg.SetDefaults()
+	// apply the given options
+	for _, opt := range opts {
+		opt.apply(provider)
+	}
+
+	// set the config defaults - this does not override the config values
+	provider.cfg.SetDefaults()
+
+	// if the provider is not enabled, return a noop provider
+	if !provider.cfg.Enabled {
+		return provider, nil
+	}
 
 	// create the resource
-	resource, err := resourceFactory(ctx, cfg.ResourceName)
+	resource, err := resourceFactory(provider.ctx, provider.cfg.ResourceName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create resource: %w", err)
+		provider.logger.Error("failed to create exporter", err)
+		return provider, fmt.Errorf("failed to create resource: %w", err)
 	}
 
 	// create the exporter - here's where connecting to the collector happens
-	exporter, err := exporterFactory(ctx, cfg)
+	exporter, err := exporterFactory(provider.ctx, provider.cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create exporter: %w", err)
+		provider.logger.Error("failed to create exporter", err)
+		return provider, fmt.Errorf("failed to create exporter: %w", err)
 	}
 
 	// create the span processor - this is what will send the spans to the exporter.
-	spanProcesor := spanProcessorFactory(cfg.SpanProcessorType, exporter)
+	spanProcesor := spanProcessorFactory(provider.cfg.SpanProcessorType, exporter)
 
 	// Create the trace provider
 	// The trace provider will use the resource and exporter created previously
@@ -73,19 +87,23 @@ func NewProvider(ctx context.Context, cfg config.OpenTelemetry) (Provider, error
 		sdktrace.WithResource(resource),
 		sdktrace.WithSpanProcessor(spanProcesor),
 	)
+
+	// set the local trace provider
+	provider.traceProvider = tracerProvider
+	provider.providerShutdownFn = tracerProvider.Shutdown
+
 	// set global otel trace provider
 	otel.SetTracerProvider(tracerProvider)
 
 	// set the global otel context propagator
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	errHandler := &errHandler{}
-	otel.SetErrorHandler(errHandler)
-	return &traceProvider{
-		traceProvider:      tracerProvider,
-		providerShutdownFn: tracerProvider.Shutdown,
-		cfg:                &cfg,
-	}, nil
+	// set the global otel error handler
+	otel.SetErrorHandler(&errHandler{
+		logger: provider.logger,
+	})
+
+	return provider, nil
 }
 
 func (tp *traceProvider) Shutdown(ctx context.Context) error {
@@ -101,45 +119,4 @@ func (tp *traceProvider) Shutdown(ctx context.Context) error {
 
 func (tp *traceProvider) Tracer() Tracer {
 	return tp.traceProvider.Tracer(tp.cfg.ResourceName)
-}
-
-type Option interface {
-	Apply(*traceProvider) error
-}
-
-type opts struct {
-	apply func(*traceProvider) error
-}
-
-func (o *opts) Apply(tp *traceProvider) error {
-	return o.apply(tp)
-}
-
-func WithConfig(cfg config.OpenTelemetry) Option {
-	return &opts{
-		apply: func(tp *traceProvider) error {
-			tp.cfg = &cfg
-			return nil
-		},
-	}
-}
-
-func WithLogger(logger Logger) Option {
-	return &opts{
-		apply: func(tp *traceProvider) error {
-			tp.logger = logger
-			return nil
-		},
-	}
-}
-
-type errHandler struct {
-	err error
-}
-
-func (er *errHandler) Handle(err error) {
-	fmt.Println("aca")
-	if err != nil {
-		fmt.Println("ERrrrrrrrr")
-	}
 }

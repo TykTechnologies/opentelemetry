@@ -18,7 +18,7 @@ func Test_NewGRPCClient(t *testing.T) {
 	ctx := context.Background()
 	endpoint := "localhost:4317"
 
-	cfg := config.OpenTelemetry{
+	cfg := &config.OpenTelemetry{
 		Endpoint: endpoint,
 	}
 
@@ -30,7 +30,7 @@ func Test_NewHTTPClient(t *testing.T) {
 	ctx := context.Background()
 	endpoint := "localhost:4317"
 
-	cfg := config.OpenTelemetry{
+	cfg := &config.OpenTelemetry{
 		Endpoint: endpoint,
 	}
 
@@ -43,20 +43,20 @@ func Test_ExporterFactory(t *testing.T) {
 
 	tcs := []struct {
 		name        string
-		givenConfig config.OpenTelemetry
+		givenConfig *config.OpenTelemetry
 		expectedErr error
 		setupFn     func() (string, func())
 	}{
 		{
 			name: "invalid exporter type",
-			givenConfig: config.OpenTelemetry{
+			givenConfig: &config.OpenTelemetry{
 				Exporter: "invalid",
 			},
 			expectedErr: fmt.Errorf("invalid exporter type: %s", "invalid"),
 		},
 		{
 			name: "http exporter",
-			givenConfig: config.OpenTelemetry{
+			givenConfig: &config.OpenTelemetry{
 				Exporter:          "http",
 				Endpoint:          "to be replace by setupFn",
 				ConnectionTimeout: 1,
@@ -74,7 +74,7 @@ func Test_ExporterFactory(t *testing.T) {
 
 		{
 			name: "gRPC exporter",
-			givenConfig: config.OpenTelemetry{
+			givenConfig: &config.OpenTelemetry{
 				Exporter:          "grpc",
 				Endpoint:          "to be replace by setupFn",
 				ConnectionTimeout: 1,
