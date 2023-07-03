@@ -53,7 +53,7 @@ func NewProvider(ctx context.Context, cfg config.OpenTelemetry) (Provider, error
 	}
 
 	// create the span processor - this is what will send the spans to the exporter.
-	spanProcesor := spanProcessorFactory(cfg.SpanProcessorType, exporter)
+	spanProcesor := spanProcessorFactory(cfg, exporter)
 
 	// Create the trace provider
 	// The trace provider will use the resource and exporter created previously

@@ -1,23 +1,18 @@
 package trace
 
 import (
+	"github.com/TykTechnologies/opentelemetry/config"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-type spanProcessorCreator func(sdktrace.SpanExporter) sdktrace.SpanProcessor
-
-var spanProcessorCreators = map[string]spanProcessorCreator{
-	"simple": newSimpleSpanProcessor,
-	"batch":  newBatchSpanProcessor,
-}
-
-func spanProcessorFactory(spanProcessorType string, exporter sdktrace.SpanExporter) sdktrace.SpanProcessor {
-	if creator, exists := spanProcessorCreators[spanProcessorType]; exists {
-		return creator(exporter)
+func spanProcessorFactory(cfg config.OpenTelemetry, exporter sdktrace.SpanExporter) sdktrace.SpanProcessor {
+	switch cfg.SpanProcessorType {
+	case "simple":
+		return newSimpleSpanProcessor(exporter)
+	default:
+		// Default to BatchSpanProcessor
+		return newBatchSpanProcessor(exporter)
 	}
-
-	// Default to BatchSpanProcessor if the spanProcessorType does not exist
-	return newBatchSpanProcessor(exporter)
 }
 
 func newSimpleSpanProcessor(exporter sdktrace.SpanExporter) sdktrace.SpanProcessor {

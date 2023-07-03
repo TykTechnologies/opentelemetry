@@ -2,6 +2,7 @@ package trace
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,9 @@ func Test_NewSimpleSpanProcessor(t *testing.T) {
 	tp.RegisterSpanProcessor(processor)
 
 	// Create a new span
-	startTestSpan(t, tp, spanID, wantTraceID).End()
+	spans := startTestSpan(t, tp, spanID, wantTraceID, 1)
+	span := spans[0]
+	span.End()
 	assert.Equal(t, 1, len(te.spans))
 
 	gotTraceID := te.spans[0].SpanContext().TraceID()
@@ -72,13 +75,26 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 	tp.RegisterSpanProcessor(processor)
 
 	// Create a new span
-	startTestSpan(t, tp, spanID, wantTraceID).End()
-	tp.ForceFlush(context.Background())
-	assert.Equal(t, 1, len(te.spans))
+	t.Run("single trace", func(t *testing.T) {
+		spans := startTestSpan(t, tp, spanID, wantTraceID, 1)
+		span := spans[0]
+		span.End()
+		tp.ForceFlush(context.Background()) // forcing flush to avoid waiting for the batch timeout
+		assert.Equal(t, 1, len(te.spans))
+		gotTraceID := te.spans[0].SpanContext().TraceID()
+		assert.Equal(t, wantTraceID, gotTraceID)
+	})
+	t.Run("multiple traces in a single batch", func(t *testing.T) {
+		spans := startTestSpan(t, tp, spanID, wantTraceID, 5)
+		for _, span := range spans {
+			span.End()
+		}
+		tp.ForceFlush(context.Background()) // forcing flush to avoid waiting for the batch timeout
+		assert.Equal(t, 6, len(te.spans))   // 5 spans + 1 from the prior test
+		gotTraceID := te.spans[5].SpanContext().TraceID()
+		assert.Equal(t, wantTraceID, gotTraceID)
+	})
 
-	gotTraceID := te.spans[0].SpanContext().TraceID()
-
-	assert.Equal(t, wantTraceID, gotTraceID)
 }
 
 func prepareTestProvider(t *testing.T) (*sdktrace.TracerProvider, trace.TraceID, trace.SpanID) {
@@ -97,7 +113,7 @@ func prepareTestProvider(t *testing.T) (*sdktrace.TracerProvider, trace.TraceID,
 	return tp, wantTraceID, spanID
 }
 
-func startTestSpan(t *testing.T, tp trace.TracerProvider, sid trace.SpanID, tid trace.TraceID) trace.Span {
+func startTestSpan(t *testing.T, tp trace.TracerProvider, sid trace.SpanID, tid trace.TraceID, numberOfTraces int) []trace.Span {
 	t.Helper()
 
 	tr := tp.Tracer("SpanProcessor")
@@ -106,7 +122,13 @@ func startTestSpan(t *testing.T, tp trace.TracerProvider, sid trace.SpanID, tid 
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	})
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
-	_, span := tr.Start(ctx, "OnEnd")
-	return span
+
+	response := make([]trace.Span, numberOfTraces)
+	for i := 0; i < numberOfTraces; i++ {
+		ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+		_, span := tr.Start(ctx, "OnEnd"+strconv.Itoa(i))
+		response[i] = span
+	}
+
+	return response
 }
