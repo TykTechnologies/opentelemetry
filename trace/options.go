@@ -19,7 +19,7 @@ func (o *opts) apply(tp *traceProvider) {
 }
 
 /*
-	WithConfig sets the configuraiton options for the trace provider
+	WithConfig sets the configuration options for the trace provider
 
 Example
 
