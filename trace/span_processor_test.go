@@ -43,7 +43,7 @@ func Test_NewSimpleSpanProcessor(t *testing.T) {
 	processor := newSimpleSpanProcessor(&te)
 	assert.NotNil(t, processor)
 
-	// Create a new trace provider
+	// Create a new tracer provider
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
 
 	// create span and trace ids
@@ -53,7 +53,7 @@ func Test_NewSimpleSpanProcessor(t *testing.T) {
 	spanID, err := trace.SpanIDFromHex("0102040810203040")
 	assert.Nil(t, err)
 
-	// Register the span processor with the trace provider
+	// Register the span processor with the tracer provider
 	tp.RegisterSpanProcessor(processor)
 
 	// Create a new span
@@ -78,7 +78,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 		// Create a new span processor
 		processor := newBatchSpanProcessor(&te)
 		assert.NotNil(t, processor)
-		// Create a new trace provider
+		// Create a new tracer provider
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
 
 		// create span and trace ids
@@ -88,7 +88,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 		spanID, err := trace.SpanIDFromHex("0102040810203040")
 		assert.Nil(t, err)
 
-		// Register the span processor with the trace provider
+		// Register the span processor with the tracer provider
 		tp.RegisterSpanProcessor(processor)
 
 		spans := startTestSpan(t, tp, spanID, wantTraceID, 1)
@@ -106,7 +106,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 		// Create a new span processor
 		processor := newBatchSpanProcessor(&te)
 		assert.NotNil(t, processor)
-		// Create a new trace provider
+		// Create a new tracer provider
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
 
 		traceIDs := make([]trace.TraceID, 5)
@@ -121,7 +121,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 			spanIDs[i] = spanID
 		}
 
-		// Register the span processor with the trace provider
+		// Register the span processor with the tracer provider
 		tp.RegisterSpanProcessor(processor)
 
 		for i := 0; i < 5; i++ {
@@ -144,7 +144,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 		// Create a new span processor
 		processor := newBatchSpanProcessor(&te)
 		assert.NotNil(t, processor)
-		// Create a new trace provider
+		// Create a new tracer provider
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
 
 		traceIDs := make([]trace.TraceID, 5)
@@ -159,7 +159,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 			spanIDs[i] = spanID
 		}
 
-		// Register the span processor with the trace provider
+		// Register the span processor with the tracer provider
 		tp.RegisterSpanProcessor(processor)
 
 		for i := 0; i < 5; i++ {
