@@ -67,24 +67,24 @@ func main() {
 		Handler: mux,
 	}
 
-	go func(cfg config.OpenTelemetry) {
-		<-ctx.Done() // Blocks here until ctx is cancelled
-		newCtx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ConnectionTimeout)*time.Second)
-		defer cancel()
-		// Shutdown provider (with a new context)
-		if err := provider.Shutdown(newCtx); err != nil {
-			log.Fatal("failed to shutdown TracerProvider: %w", err)
+	go func() {
+		log.Printf("server listening on port %s", ":8080")
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			// Error starting or closing listener:
+			log.Printf("HTTP server ListenAndServe: %v", err)
 		}
+	}()
 
-		if err := srv.Shutdown(newCtx); err != nil {
-			// Error from closing listeners, or context timeout:
-			log.Printf("HTTP server Shutdown: %v", err)
-		}
-	}(cfg)
+	<-ctx.Done() // Blocks here until ctx is cancelled
+	newCtx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ConnectionTimeout)*time.Second)
+	defer cancel()
+	// Shutdown provider (with a new context)
+	if err := provider.Shutdown(newCtx); err != nil {
+		log.Fatal("failed to shutdown TracerProvider: %w", err)
+	}
 
-	log.Printf("server listening on port %s", ":8080")
-	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		// Error starting or closing listener:
-		log.Printf("HTTP server ListenAndServe: %v", err)
+	if err := srv.Shutdown(newCtx); err != nil {
+		// Error from closing listeners, or context timeout:
+		log.Printf("HTTP server Shutdown: %v", err)
 	}
 }

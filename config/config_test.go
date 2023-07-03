@@ -29,6 +29,7 @@ func Test_SetDefault(t *testing.T) {
 				Endpoint:          "test",
 				ConnectionTimeout: 10,
 				ResourceName:      "test-resource",
+				SpanProcessorType: "simple",
 			},
 			expectedCfg: OpenTelemetry{
 				Enabled:           true,
@@ -36,6 +37,7 @@ func Test_SetDefault(t *testing.T) {
 				Endpoint:          "test",
 				ConnectionTimeout: 10,
 				ResourceName:      "test-resource",
+				SpanProcessorType: "simple",
 			},
 		},
 		{
@@ -49,6 +51,7 @@ func Test_SetDefault(t *testing.T) {
 				Endpoint:          "localhost:4317",
 				ConnectionTimeout: 1,
 				ResourceName:      "tyk",
+				SpanProcessorType: "batch",
 			},
 		},
 	}
