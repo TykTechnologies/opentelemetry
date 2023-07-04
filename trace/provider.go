@@ -7,7 +7,6 @@ import (
 
 	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -19,7 +18,7 @@ type Provider interface {
 	// Shutdown execute the underlying exporter shutdown function
 	Shutdown(context.Context) error
 	// Tracer returns a tracer with pre-configured name. It's used to create spans.
-	Tracer(string) Tracer
+	Tracer() Tracer
 	// Type returns the type of the provider, it can be either "noop" or "otel"
 	Type() string
 }
@@ -144,17 +143,8 @@ func (tp *traceProvider) Shutdown(ctx context.Context) error {
 	return tp.providerShutdownFn(ctx)
 }
 
-func (tp *traceProvider) Tracer(name string) Tracer {
-	attrs := []attribute.KeyValue{
-		attribute.String("tyktel.lib.version", "v1.9.8"),
-	}
-
-	opts := []oteltrace.TracerOption{
-		oteltrace.WithInstrumentationVersion("v9.9.9"),
-		oteltrace.WithInstrumentationAttributes(attrs...),
-		oteltrace.WithSchemaURL("http://tyk.io"),
-	}
-	return tp.traceProvider.Tracer(name, opts...)
+func (tp *traceProvider) Tracer() Tracer {
+	return tp.traceProvider.Tracer(tp.cfg.ResourceName)
 }
 
 func (tp *traceProvider) Type() string {
