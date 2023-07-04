@@ -36,6 +36,7 @@ func Test_httpSpanNameFormatter(t *testing.T) {
 			want: "GET /test",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := httpSpanNameFormatter(tt.args.operation, tt.args.r); got != tt.want {
@@ -153,5 +154,4 @@ func Test_NewHTTPHandler(t *testing.T) {
 
 	// check if the response is the same as the content
 	assert.Equal(t, body, content)
-
 }
