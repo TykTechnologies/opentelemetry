@@ -36,7 +36,7 @@ func main() {
 		return
 	}
 
-	tracer := provider.Tracer()
+	tracer := provider.Tracer("e2e-basic")
 
 	mux := http.NewServeMux()
 	mux.Handle("/test", otelhttp.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -139,7 +139,7 @@ func Test_Tracer(t *testing.T) {
 				defer teardown()
 			}
 
-			// first check if we are setting the internal tracer provider
+			// first check if we are setting the internal trace provider
 			provider, err := NewProvider(WithContext(ctx), WithConfig(tc.givenCfg))
 			assert.Nil(t, err)
 			assert.NotNil(t, provider)
@@ -149,7 +149,7 @@ func Test_Tracer(t *testing.T) {
 
 			assert.IsType(t, tc.expectedTraceProvider, tp.traceProvider)
 
-			// now check if we are setting the OTel global tracer provider
+			// now check if we are setting the OTel global trace provider
 			globalProvider := otel.GetTracerProvider()
 			assert.NotNil(t, globalProvider)
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -144,7 +145,16 @@ func (tp *traceProvider) Shutdown(ctx context.Context) error {
 }
 
 func (tp *traceProvider) Tracer(name string) Tracer {
-	return tp.traceProvider.Tracer(name)
+	attrs := []attribute.KeyValue{
+		attribute.String("tyktel.lib.version", "v1.9.8"),
+	}
+
+	opts := []oteltrace.TracerOption{
+		oteltrace.WithInstrumentationVersion("v9.9.9"),
+		oteltrace.WithInstrumentationAttributes(attrs...),
+		oteltrace.WithSchemaURL("http://tyk.io"),
+	}
+	return tp.traceProvider.Tracer(name, opts...)
 }
 
 func (tp *traceProvider) Type() string {
