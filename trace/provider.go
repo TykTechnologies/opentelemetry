@@ -18,7 +18,7 @@ type Provider interface {
 	// Shutdown execute the underlying exporter shutdown function
 	Shutdown(context.Context) error
 	// Tracer returns a tracer with pre-configured name. It's used to create spans.
-	Tracer() Tracer
+	Tracer(string) Tracer
 	// Type returns the type of the provider, it can be either "noop" or "otel"
 	Type() string
 }
@@ -143,8 +143,8 @@ func (tp *traceProvider) Shutdown(ctx context.Context) error {
 	return tp.providerShutdownFn(ctx)
 }
 
-func (tp *traceProvider) Tracer() Tracer {
-	return tp.traceProvider.Tracer(tp.cfg.ResourceName)
+func (tp *traceProvider) Tracer(name string) Tracer {
+	return tp.traceProvider.Tracer(name)
 }
 
 func (tp *traceProvider) Type() string {

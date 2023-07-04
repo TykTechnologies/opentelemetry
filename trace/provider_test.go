@@ -154,7 +154,7 @@ func Test_Tracer(t *testing.T) {
 			assert.NotNil(t, globalProvider)
 
 			// lastly, check the tracer
-			tracer := provider.Tracer()
+			tracer := provider.Tracer("test")
 			assert.NotNil(t, tracer)
 		})
 	}
