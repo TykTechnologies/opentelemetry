@@ -19,7 +19,7 @@ func (o *opts) apply(tp *traceProvider) {
 }
 
 /*
-	WithConfig sets the configuration options for the trace provider
+	WithConfig sets the configuration options for the tracer provider
 
 Example
 
@@ -42,7 +42,7 @@ func WithConfig(cfg *config.OpenTelemetry) Option {
 }
 
 /*
-	WithLogger sets the logger for the trace provider
+	WithLogger sets the logger for the tracer provider
 	This is used to log errors and info messages for underlying operations
 
 Example
@@ -62,7 +62,7 @@ func WithLogger(logger Logger) Option {
 }
 
 /*
-	WithContext sets the context for the trace provider
+	WithContext sets the context for the tracer provider
 
 Example
 
