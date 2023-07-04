@@ -13,11 +13,12 @@ spec:
         value: application/json
   specs:
   - name: Check main span - http.method, http.scheme and http.status_code
-    selector: span[tracetest.span.type="http" name="get_test"]
+    selector: span[tracetest.span.type="http" name="GET /test" http.method="GET"]
     assertions:
-    - attr:http.scheme = "http"
-    - attr:http.method = "GET"
-    - attr:http.status_code = 200
+    - attr:http.scheme  =  "http"
+    - attr:http.method  =  "GET"
+    - attr:http.status_code  =  200
+    - attr:tracetest.span.name = "GET /test"
   - name: Check if http span has one child span
     selector: span[tracetest.span.type="http"]
     assertions:

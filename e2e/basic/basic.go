@@ -35,11 +35,9 @@ func main() {
 		return
 	}
 
-	tracer := provider.Tracer()
-
 	mux := http.NewServeMux()
 	mux.Handle("/test", trace.NewHTTPHandler("get_test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, span := tracer.Start(r.Context(), "main")
+		_, span := provider.Tracer().Start(r.Context(), "main")
 		defer span.End()
 
 		span.AddEvent("test event")
