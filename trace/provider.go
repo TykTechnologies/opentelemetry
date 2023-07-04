@@ -12,7 +12,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-// Provider is the interface that wraps the basic methods of a trace provider.
+// Provider is the interface that wraps the basic methods of a tracer provider.
 // If missconfigured or disabled, the provider will return a noop tracer
 type Provider interface {
 	// Shutdown execute the underlying exporter shutdown function
@@ -42,8 +42,8 @@ type traceProvider struct {
 }
 
 /*
-	 NewProvider creates a new trace provider with the given options
-	 The trace provider is responsible for creating spans and sending them to the exporter
+	 NewProvider creates a new tracer provider with the given options
+	 The tracer provider is responsible for creating spans and sending them to the exporter
 
 	 Example
 		provider, err := trace.NewProvider(
@@ -99,10 +99,10 @@ func NewProvider(opts ...Option) (Provider, error) {
 	// create the span processor - this is what will send the spans to the exporter.
 	spanProcesor := spanProcessorFactory(provider.cfg.SpanProcessorType, exporter)
 
-	// Create the trace provider
-	// The trace provider will use the resource and exporter created previously
+	// Create the tracer provider
+	// The tracer provider will use the resource and exporter created previously
 	// to generate spans and send them to the exporter
-	// The trace provider must be registered as a global trace provider
+	// The tracer provider must be registered as a global tracer provider
 	// so that any other package can use it
 
 	tracerProvider := sdktrace.NewTracerProvider(
@@ -111,12 +111,12 @@ func NewProvider(opts ...Option) (Provider, error) {
 		sdktrace.WithSpanProcessor(spanProcesor),
 	)
 
-	// set the local trace provider
+	// set the local tracer provider
 	provider.traceProvider = tracerProvider
 	provider.providerShutdownFn = tracerProvider.Shutdown
 	provider.providerType = OTEL_PROVIDER
 
-	// set global otel trace provider
+	// set global otel tracer provider
 	otel.SetTracerProvider(tracerProvider)
 
 	// set the global otel context propagator
@@ -127,7 +127,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 		logger: provider.logger,
 	})
 
-	provider.logger.Info("trace provider initialized successfully")
+	provider.logger.Info("Tracer provider initialized successfully")
 
 	return provider, nil
 }
