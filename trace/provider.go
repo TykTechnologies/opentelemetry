@@ -19,9 +19,16 @@ type Provider interface {
 	Shutdown(context.Context) error
 	// Tracer returns a tracer with pre-configured name. It's used to create spans.
 	Tracer() Tracer
+	// Type returns the type of the provider, it can be either "noop" or "otel"
+	Type() string
 }
 
 type Tracer = oteltrace.Tracer
+
+const (
+	NOOP_PROVIDER = "noop"
+	OTEL_PROVIDER = "otel"
+)
 
 type traceProvider struct {
 	traceProvider      oteltrace.TracerProvider
@@ -30,7 +37,8 @@ type traceProvider struct {
 	cfg    *config.OpenTelemetry
 	logger Logger
 
-	ctx context.Context
+	ctx          context.Context
+	providerType string
 }
 
 /*
@@ -58,6 +66,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 		logger:             &noopLogger{},
 		cfg:                &config.OpenTelemetry{},
 		ctx:                context.Background(),
+		providerType:       NOOP_PROVIDER,
 	}
 
 	// apply the given options
@@ -105,6 +114,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 	// set the local tracer provider
 	provider.traceProvider = tracerProvider
 	provider.providerShutdownFn = tracerProvider.Shutdown
+	provider.providerType = OTEL_PROVIDER
 
 	// set global otel tracer provider
 	otel.SetTracerProvider(tracerProvider)
@@ -135,4 +145,8 @@ func (tp *traceProvider) Shutdown(ctx context.Context) error {
 
 func (tp *traceProvider) Tracer() Tracer {
 	return tp.traceProvider.Tracer(tp.cfg.ResourceName)
+}
+
+func (tp *traceProvider) Type() string {
+	return tp.providerType
 }

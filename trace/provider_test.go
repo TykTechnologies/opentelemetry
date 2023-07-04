@@ -159,3 +159,37 @@ func Test_Tracer(t *testing.T) {
 		})
 	}
 }
+
+func Test_Type(t *testing.T) {
+	tcs := []struct {
+		name         string
+		givenCfg     *config.OpenTelemetry
+		expectedType string
+	}{
+		{
+			name: "no op tracer",
+			givenCfg: &config.OpenTelemetry{
+				Enabled: false,
+			},
+			expectedType: "noop",
+		},
+		{
+			name: "otel tracer",
+			givenCfg: &config.OpenTelemetry{
+				Enabled: true,
+			},
+			expectedType: "otel",
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			provider, err := NewProvider(WithContext(ctx), WithConfig(tc.givenCfg))
+			assert.Nil(t, err)
+			assert.NotNil(t, provider)
+
+			assert.Equal(t, tc.expectedType, provider.Type())
+		})
+	}
+}
