@@ -1,6 +1,16 @@
 package trace
 
-import "fmt"
+import (
+	"fmt"
+
+	"go.opentelemetry.io/otel/codes"
+)
+
+const (
+	SPAN_STATUS_ERROR = codes.Error
+	SPAN_STATUS_UNSET = codes.Unset
+	SPAN_STATUS_OK    = codes.Ok
+)
 
 type errHandler struct {
 	logger Logger
