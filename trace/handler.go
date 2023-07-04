@@ -20,3 +20,9 @@ func NewHTTPHandler(name string, handler http.Handler, tp Provider) http.Handler
 var httpSpanNameFormatter = func(operation string, r *http.Request) string {
 	return r.Method + " " + r.URL.Path
 }
+
+//type HTTPTransport = otelhttp.Transport
+
+func NewHTTPTransport(base http.RoundTripper) http.RoundTripper {
+	return otelhttp.NewTransport(base)
+}
