@@ -12,7 +12,6 @@ import (
 
 	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/TykTechnologies/opentelemetry/trace"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -39,7 +38,7 @@ func main() {
 	tracer := provider.Tracer()
 
 	mux := http.NewServeMux()
-	mux.Handle("/test", otelhttp.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/test", trace.NewHTTPHandler("get_test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, span := tracer.Start(r.Context(), "main")
 		defer span.End()
 
@@ -60,7 +59,7 @@ func main() {
 			log.Printf("error on encode response %s", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-	}), "get_test"))
+	}), provider))
 
 	srv := &http.Server{
 		Addr:    ":8080",
