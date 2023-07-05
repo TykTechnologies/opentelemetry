@@ -109,8 +109,11 @@ func Test_ExporterFactory(t *testing.T) {
 
 				tc.givenConfig.Endpoint = endpoint
 			}
-
-			exporter, err := exporterFactory(ctx, tc.givenConfig)
+			provider := &traceProvider{
+				cfg:    tc.givenConfig,
+				logger: &mockLogger{},
+			}
+			exporter, err := exporterFactory(ctx, provider)
 			if tc.expectedErr != nil {
 				assert.NotNil(t, err)
 				assert.Equal(t, tc.expectedErr.Error(), err.Error())
