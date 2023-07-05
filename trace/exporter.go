@@ -79,6 +79,7 @@ func isHTTPEndpointActive(endpoint string) bool {
 	}
 
 	_, err = client.Do(req)
+
 	return err == nil
 }
 
