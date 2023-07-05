@@ -7,7 +7,6 @@ import (
 
 	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -111,6 +110,12 @@ func NewProvider(opts ...Option) (Provider, error) {
 		sdktrace.WithSpanProcessor(spanProcesor),
 	)
 
+	propagator, err := propagatorFactory(provider.cfg)
+	if err != nil {
+		provider.logger.Error("failed to create context propagator", err)
+		return provider, fmt.Errorf("failed to create context propagator: %w", err)
+	}
+
 	// set the local tracer provider
 	provider.traceProvider = tracerProvider
 	provider.providerShutdownFn = tracerProvider.Shutdown
@@ -120,7 +125,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 	otel.SetTracerProvider(tracerProvider)
 
 	// set the global otel context propagator
-	otel.SetTextMapPropagator(propagation.TraceContext{})
+	otel.SetTextMapPropagator(propagator)
 
 	// set the global otel error handler
 	otel.SetErrorHandler(&errHandler{
