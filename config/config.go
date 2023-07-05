@@ -23,11 +23,23 @@ type OpenTelemetry struct {
 	// Valid values are "simple" or "batch".
 	// Defaults to "batch"
 	SpanProcessorType string `json:"span_processor_type"`
+	// context_propagation is the type of the context propagator to use.
+	// Valid values are:
+	// - "tracecontext": tracecontext is a propagator that supports the W3C
+	// Trace Context format (https://www.w3.org/TR/trace-context/).
+	// - "b3": b3 is a propagator serializes SpanContext to/from B3 multi Headers format.
+	// Defaults to "tracecontext"
+	ContextPropagation string `json:"context_propagation"`
 }
 
 const (
+	// available exporters types
 	HTTPEXPORTER = "http"
 	GRPCEXPORTER = "grpc"
+
+	// available context propagators
+	PROPAGATOR_TRACECONTEXT = "tracecontext"
+	PROPAGATOR_B3           = "b3"
 )
 
 // SetDefaults sets the default values for the OpenTelemetry config.
@@ -54,5 +66,9 @@ func (c *OpenTelemetry) SetDefaults() {
 
 	if c.SpanProcessorType == "" {
 		c.SpanProcessorType = "batch"
+	}
+
+	if c.ContextPropagation == "" {
+		c.ContextPropagation = PROPAGATOR_TRACECONTEXT
 	}
 }
