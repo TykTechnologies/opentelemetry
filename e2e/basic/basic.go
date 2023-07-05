@@ -22,8 +22,8 @@ func main() {
 
 	cfg := config.OpenTelemetry{
 		Enabled:           true,
-		Exporter:          "http",
-		Endpoint:          "localhost:4318",
+		Exporter:          "grpc",
+		Endpoint:          "localhost:4317",
 		ConnectionTimeout: 10,
 		ResourceName:      "e2e-basic",
 	}
