@@ -33,18 +33,19 @@ type OpenTelemetry struct {
 	// sampler_type refers to the policy used by OpenTelemetry to determine
 	// whether a particular trace should be sampled or not. It's determined at the
 	// start of a trace and the decision is propagated down the trace. Valid Values are:
-	// AlwaysOn, AlwaysOff and TraceIDRatioBased. Defaults to AlwaysOn
+	// AlwaysOn, AlwaysOff and TraceIDRatioBased. It defaults to AlwaysOn
 	SamplingType string `json:"sampler_type"`
 	// sampling_rate is a parameter for the TraceIDRatioBased sampler type. It represents
 	// the percentage of traces to be sampled. The value should be a float between 0.0 (0%) and 1.0 (100%).
 	// If the sampling rate is 0.5, the sampler will aim to sample approximately 50% of traces.
-	// Defaults to 0.5
+	// it defaults to 0.5
 	SamplingRate float64 `json:"sampling_rate"`
-	// parent_based_sampling is a rule that makes sure that if we decide to record data for a particular operation (a "span"),
-	// we'll also record data for all the work that operation causes (its "child spans").
-	// This helps keep the whole story of a transaction together. You usually use ParentBased with TraceIDRatioBased,
-	// because with AlwaysOn or AlwaysOff, you're either recording everything or nothing, so there are no decisions to respect.
-	// Defaults to false
+	// parent_based_sampling is a rule that makes sure that if we decide to record data
+	// for a particular operation, we'll also record data for all the work that operation
+	// causes (its "child spans"). This helps keep the whole story of a transaction together.
+	// You usually use ParentBased with TraceIDRatioBased, because with AlwaysOn or AlwaysOff,
+	// you're either recording everything or nothing, so there are no decisions to respect.
+	// It defaults to false
 	ParentBasedSampling bool `json:"parent_based_sampling"`
 }
 
