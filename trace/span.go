@@ -6,6 +6,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func SpanFromContext(ctx context.Context) trace.Span {
+type Span trace.Span
+
+func SpanFromContext(ctx context.Context) Span {
 	return trace.SpanFromContext(ctx)
 }
