@@ -105,12 +105,18 @@ func TestNewSpanFromContext(t *testing.T) {
 
 			assert.NotEqual(newCtx, tt.ctx, "NewSpanFromContext() newCtx is the same as input ctx")
 
-			assert.NotEqual(got.SpanContext().SpanID(), originalSpan.SpanContext().SpanID(), "NewSpanFromContext() got is the same as original span")
+			assert.NotEqual(got.SpanContext().SpanID(),
+				originalSpan.SpanContext().SpanID(),
+				"NewSpanFromContext() got is the same as original span")
 
-			assert.Equal(got.SpanContext().IsValid(), tt.isValid, "NewSpanFromContext() got's span validity does not match expected validity")
+			assert.Equal(got.SpanContext().IsValid(),
+				tt.isValid,
+				"NewSpanFromContext() got's span validity does not match expected validity")
 
 			if tt.isValid {
-				assert.Equal(got.SpanContext().TraceID(), originalSpan.SpanContext().TraceID(), "NewSpanFromContext() got's TraceID does not match original span's TraceID")
+				assert.Equal(got.SpanContext().TraceID(),
+					originalSpan.SpanContext().TraceID(),
+					"NewSpanFromContext() got's TraceID does not match original span's TraceID")
 			}
 		})
 	}
