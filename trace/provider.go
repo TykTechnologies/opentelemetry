@@ -98,6 +98,9 @@ func NewProvider(opts ...Option) (Provider, error) {
 	// create the span processor - this is what will send the spans to the exporter.
 	spanProcesor := spanProcessorFactory(provider.cfg.SpanProcessorType, exporter)
 
+	// create the sampler based on the configs
+	sampler := getSampler(provider.cfg.SamplingType, provider.cfg.SamplingRate, provider.cfg.ParentBasedSampling)
+
 	// Create the tracer provider
 	// The tracer provider will use the resource and exporter created previously
 	// to generate spans and send them to the exporter
@@ -105,7 +108,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 	// so that any other package can use it
 
 	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSampler(sampler),
 		sdktrace.WithResource(resource),
 		sdktrace.WithSpanProcessor(spanProcesor),
 	)
@@ -135,6 +138,32 @@ func NewProvider(opts ...Option) (Provider, error) {
 	provider.logger.Info("Tracer provider initialized successfully")
 
 	return provider, nil
+}
+
+func getSampler(samplingType string, samplingRate float64, parentBased bool) sdktrace.Sampler {
+	switch samplingType {
+	case "AlwaysOn":
+		if parentBased {
+			return sdktrace.ParentBased(sdktrace.AlwaysSample())
+		} else {
+			return sdktrace.AlwaysSample()
+		}
+	case "AlwaysOff":
+		if parentBased {
+			return sdktrace.ParentBased(sdktrace.NeverSample())
+		} else {
+			return sdktrace.NeverSample()
+		}
+	case "TraceIDRatioBased":
+		if parentBased {
+			return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(samplingRate))
+		} else {
+			return sdktrace.TraceIDRatioBased(samplingRate)
+		}
+	default:
+		// Default to AlwaysOn if no valid sampling type is provided
+		return sdktrace.ParentBased(sdktrace.AlwaysSample())
+	}
 }
 
 func (tp *traceProvider) Shutdown(ctx context.Context) error {
