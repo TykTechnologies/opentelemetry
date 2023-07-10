@@ -162,7 +162,7 @@ func getSampler(samplingType string, samplingRate float64, parentBased bool) sdk
 		}
 	default:
 		// Default to AlwaysOn if no valid sampling type is provided
-		return sdktrace.ParentBased(sdktrace.AlwaysSample())
+		return sdktrace.AlwaysSample()
 	}
 }
 

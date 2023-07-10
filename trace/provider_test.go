@@ -193,3 +193,32 @@ func Test_Type(t *testing.T) {
 		})
 	}
 }
+
+func Test_GetSampler(t *testing.T) {
+	tests := []struct {
+		name         string
+		samplingType string
+		samplingRate float64
+		parentBased  bool
+		expectedDesc string
+	}{
+		{"AlwaysOn", "AlwaysOn", 0, false, "AlwaysOnSampler"},
+		{"AlwaysOff", "AlwaysOff", 0, false, "AlwaysOffSampler"},
+		{"TraceIDRatioBased-0", "TraceIDRatioBased", 0, true,
+			"ParentBased{root:TraceIDRatioBased{0},remoteParentSampled:AlwaysOnSampler," +
+				"remoteParentNotSampled:AlwaysOffSampler,localParentSampled:AlwaysOnSampler,localParentNotSampled:AlwaysOffSampler}"},
+		{"TraceIDRatioBased-0.5", "TraceIDRatioBased", 0.5, false, "TraceIDRatioBased{0.5}"},
+		{"TraceIDRatioBased-1", "TraceIDRatioBased", 1, false, "AlwaysOnSampler"},
+		{"Invalid", "Invalid", 0, false, "AlwaysOnSampler"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sampler := getSampler(tt.samplingType, tt.samplingRate, tt.parentBased)
+
+			if got := sampler.Description(); got != tt.expectedDesc {
+				t.Errorf("getSampler() = %v, want %v", got, tt.expectedDesc)
+			}
+		})
+	}
+}
