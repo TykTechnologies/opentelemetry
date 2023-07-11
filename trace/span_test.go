@@ -50,3 +50,74 @@ func TestSpanFromContext(t *testing.T) {
 		})
 	}
 }
+
+func TestNewSpanFromContext(t *testing.T) {
+	assert := assert.New(t)
+
+	provider, err := NewProvider(
+		WithContext(context.Background()),
+		WithConfig(&config.OpenTelemetry{Enabled: true}),
+	)
+	assert.NoError(err, "Failed to create new provider")
+
+	// Creating a sample span
+	ctx, originalSpan := provider.Tracer().Start(context.Background(), "sample span")
+
+	// Table for the test cases
+	tests := []struct {
+		name       string
+		ctx        context.Context
+		tracerName string
+		spanName   string
+		isValid    bool
+	}{
+		{
+			name:       "Valid context with Span and Tracer names",
+			ctx:        ctx,
+			tracerName: "tyk",
+			spanName:   "new span",
+			isValid:    true,
+		},
+		{
+			name:       "Invalid context",
+			ctx:        context.Background(),
+			tracerName: "tyk",
+			spanName:   "new span",
+			isValid:    false,
+		},
+		{
+			name:       "Valid context without Tracer name",
+			ctx:        ctx,
+			tracerName: "",
+			spanName:   "new span",
+			isValid:    true,
+		},
+		{
+			name:    "Valid context without Tracer and span names",
+			ctx:     ctx,
+			isValid: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			newCtx, got := NewSpanFromContext(tt.ctx, tt.tracerName, tt.spanName)
+
+			assert.NotEqual(newCtx, tt.ctx, "NewSpanFromContext() newCtx is the same as input ctx")
+
+			assert.NotEqual(got.SpanContext().SpanID(),
+				originalSpan.SpanContext().SpanID(),
+				"NewSpanFromContext() got is the same as original span")
+
+			assert.Equal(got.SpanContext().IsValid(),
+				tt.isValid,
+				"NewSpanFromContext() got's span validity does not match expected validity")
+
+			if tt.isValid {
+				assert.Equal(got.SpanContext().TraceID(),
+					originalSpan.SpanContext().TraceID(),
+					"NewSpanFromContext() got's TraceID does not match original span's TraceID")
+			}
+		})
+	}
+}
