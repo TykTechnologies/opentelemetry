@@ -51,7 +51,7 @@ func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Cl
 	// Parse the endpoint as a URL
 	u, err := url.Parse(cfg.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse endpoint URL: %v", err)
+		return nil, fmt.Errorf("could not parse endpoint URL: %w", err)
 	}
 
 	// Clear any path, raw path, and scheme on the URL to make sure it's just the base URL
@@ -63,9 +63,10 @@ func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Cl
 
 	// Use the modified Insecure setting
 	var clientOptions []otlptracehttp.Option
-	clientOptions = append(clientOptions, otlptracehttp.WithEndpoint(endpoint))
-	clientOptions = append(clientOptions, otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second))
-	clientOptions = append(clientOptions, otlptracehttp.WithHeaders(cfg.Headers))
+	clientOptions = append(clientOptions, otlptracehttp.WithEndpoint(endpoint),
+		otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),
+		otlptracehttp.WithHeaders(cfg.Headers))
+
 	if u.Scheme != "https" {
 		clientOptions = append(clientOptions, otlptracehttp.WithInsecure())
 	}
