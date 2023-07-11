@@ -3,6 +3,7 @@ package trace
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/url"
 	"time"
 
@@ -47,20 +48,27 @@ func newGRPCClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Cl
 }
 
 func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Client, error) {
-	// The endpoint must not contain any URL path.
+	// Parse the endpoint as a URL
 	u, err := url.Parse(cfg.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("invalid endpoint: %s", err)
+		return nil, fmt.Errorf("could not parse endpoint URL: %v", err)
 	}
 
+	// Clear any path, raw path, and scheme on the URL to make sure it's just the base URL
 	u.Path = ""
 	u.RawPath = ""
 
-	// Use the cleaned URL as the endpoint
-	return otlptracehttp.NewClient(
-		otlptracehttp.WithEndpoint(u.String()),
-		otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),
-		otlptracehttp.WithHeaders(cfg.Headers),
-		otlptracehttp.WithInsecure(),
-	), nil
+	// Concatenate host and port as endpoint
+	endpoint := net.JoinHostPort(u.Hostname(), u.Port())
+
+	// Use the modified Insecure setting
+	var clientOptions []otlptracehttp.Option
+	clientOptions = append(clientOptions, otlptracehttp.WithEndpoint(endpoint))
+	clientOptions = append(clientOptions, otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second))
+	clientOptions = append(clientOptions, otlptracehttp.WithHeaders(cfg.Headers))
+	if u.Scheme != "https" {
+		clientOptions = append(clientOptions, otlptracehttp.WithInsecure())
+	}
+
+	return otlptracehttp.NewClient(clientOptions...), nil
 }
