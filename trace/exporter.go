@@ -36,28 +36,25 @@ func exporterFactory(ctx context.Context, cfg *config.OpenTelemetry) (sdktrace.S
 }
 
 func newGRPCClient(ctx context.Context, cfg *config.OpenTelemetry) otlptrace.Client {
-	TLSConf := &tls.Config{
-		InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
-	}
-
-	options := []otlptracegrpc.Option{
+	clientOptions := []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpoint(cfg.Endpoint),
 		otlptracegrpc.WithTimeout(time.Duration(cfg.ConnectionTimeout) * time.Second),
 		otlptracegrpc.WithHeaders(cfg.Headers),
-		otlptracegrpc.WithTLSCredentials(credentials.NewTLS(TLSConf)),
 	}
 
 	if cfg.TLSConfig.Insecure {
-		options = append(options, otlptracegrpc.WithInsecure())
+		clientOptions = append(clientOptions, otlptracegrpc.WithInsecure())
+	} else {
+		TLSConf := &tls.Config{
+			InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
+		}
+		clientOptions = append(clientOptions, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(TLSConf)))
 	}
 
-	return otlptracegrpc.NewClient(options...)
+	return otlptracegrpc.NewClient(clientOptions...)
 }
 
 func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) otlptrace.Client {
-	TLSConf := &tls.Config{
-		InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
-	}
 	// OTel SDK does not support URL with scheme nor path, so we need to parse it
 	// The scheme will be added automatically, depending on the TLSInsure setting
 	endpoint := parseEndpoint(cfg)
@@ -65,11 +62,15 @@ func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) otlptrace.Cli
 	var clientOptions []otlptracehttp.Option
 	clientOptions = append(clientOptions, otlptracehttp.WithEndpoint(endpoint),
 		otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),
-		otlptracehttp.WithHeaders(cfg.Headers),
-		otlptracehttp.WithTLSClientConfig(TLSConf))
+		otlptracehttp.WithHeaders(cfg.Headers))
 
 	if cfg.TLSConfig.Insecure {
 		clientOptions = append(clientOptions, otlptracehttp.WithInsecure())
+	} else {
+		TLSConf := &tls.Config{
+			InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
+		}
+		clientOptions = append(clientOptions, otlptracehttp.WithTLSClientConfig(TLSConf))
 	}
 
 	return otlptracehttp.NewClient(clientOptions...)
