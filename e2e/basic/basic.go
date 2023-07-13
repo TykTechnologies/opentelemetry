@@ -27,7 +27,7 @@ func main() {
 		ConnectionTimeout: 10,
 		ResourceName:      "e2e-basic",
 		TLSConfig: config.TLSConfig{
-			Insecure: true,
+			Disable: true,
 		},
 	}
 

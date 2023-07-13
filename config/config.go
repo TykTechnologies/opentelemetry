@@ -35,9 +35,9 @@ type OpenTelemetry struct {
 }
 
 type TLSConfig struct {
-	// insecure is a flag that can be used to enable or disable TLS.
-	// Defaults to false (secure).
-	Insecure bool `json:"insecure"`
+	// Disable is a flag that can be used to enable or disable TLS.
+	// Defaults to false (enabled).
+	Disable bool `json:"disable"`
 	// insecure_skip_verify is a flag that can be used to skip TLS verification if TLS is enabled.
 	// Defaults to false.
 	InsecureSkipVerify bool `json:"insecure_skip_verify"`
