@@ -22,10 +22,13 @@ func main() {
 
 	cfg := config.OpenTelemetry{
 		Enabled:           true,
-		Exporter:          "http",
-		Endpoint:          "https://localhost:4318",
-		ConnectionTimeout: 1,
+		Exporter:          "grpc",
+		Endpoint:          "otel-collector:4317",
+		ConnectionTimeout: 10,
 		ResourceName:      "e2e-basic",
+		TLSConfig: config.TLSConfig{
+			Insecure: true,
+		},
 	}
 
 	log.Println("Initializing OpenTelemetry at e2e-basic:", cfg.Endpoint)

@@ -30,6 +30,17 @@ type OpenTelemetry struct {
 	// - "b3": b3 is a propagator serializes SpanContext to/from B3 multi Headers format.
 	// Defaults to "tracecontext"
 	ContextPropagation string `json:"context_propagation"`
+	// tls_config is the TLS configuration for the exporter.
+	TLSConfig TLSConfig `json:"tls_config"`
+}
+
+type TLSConfig struct {
+	// Insecure is a flag that can be used to enable or disable TLS.
+	// Defaults to false (secure).
+	Insecure bool `json:"insecure"`
+	// InsecureSkipVerify is a flag that can be used to skip TLS verification if TLS is enabled.
+	// Defaults to false.
+	InsecureSkipVerify bool `json:"insecure_skip_verify"`
 }
 
 const (

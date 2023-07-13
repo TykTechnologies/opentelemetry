@@ -2,12 +2,15 @@ package trace
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/TykTechnologies/opentelemetry/config"
+	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -17,18 +20,11 @@ import (
 
 func exporterFactory(ctx context.Context, cfg *config.OpenTelemetry) (sdktrace.SpanExporter, error) {
 	var client otlptrace.Client
-	var err error
 	switch cfg.Exporter {
 	case config.GRPCEXPORTER:
-		client, err = newGRPCClient(ctx, cfg)
-		if err != nil {
-			return nil, err
-		}
+		client = newGRPCClient(ctx, cfg)
 	case config.HTTPEXPORTER:
-		client, err = newHTTPClient(ctx, cfg)
-		if err != nil {
-			return nil, err
-		}
+		client = newHTTPClient(ctx, cfg)
 	default:
 		return nil, fmt.Errorf("invalid exporter type: %s", cfg.Exporter)
 	}
@@ -39,37 +35,64 @@ func exporterFactory(ctx context.Context, cfg *config.OpenTelemetry) (sdktrace.S
 	return otlptrace.New(ctx, client)
 }
 
-func newGRPCClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Client, error) {
-	return otlptracegrpc.NewClient(
-		otlptracegrpc.WithEndpoint(cfg.Endpoint),
-		otlptracegrpc.WithInsecure(),
-		otlptracegrpc.WithHeaders(cfg.Headers),
-	), nil
-}
-
-func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Client, error) {
-	// Parse the endpoint as a URL
-	u, err := url.Parse(cfg.Endpoint)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse endpoint URL: %w", err)
+func newGRPCClient(ctx context.Context, cfg *config.OpenTelemetry) otlptrace.Client {
+	TLSConf := &tls.Config{
+		InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
 	}
 
-	// Clear any path, raw path, and scheme on the URL to make sure it's just the base URL
-	u.Path = ""
-	u.RawPath = ""
+	options := []otlptracegrpc.Option{
+		otlptracegrpc.WithEndpoint(cfg.Endpoint),
+		otlptracegrpc.WithTimeout(time.Duration(cfg.ConnectionTimeout) * time.Second),
+		otlptracegrpc.WithHeaders(cfg.Headers),
+		otlptracegrpc.WithTLSCredentials(credentials.NewTLS(TLSConf)),
+	}
 
-	// Concatenate host and port as endpoint
-	endpoint := net.JoinHostPort(u.Hostname(), u.Port())
+	if cfg.TLSConfig.Insecure {
+		options = append(options, otlptracegrpc.WithInsecure())
+	}
 
-	// Use the modified Insecure setting
+	return otlptracegrpc.NewClient(options...)
+}
+
+func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) otlptrace.Client {
+	TLSConf := &tls.Config{
+		InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
+	}
+	// OTel SDK does not support URL with scheme nor path, so we need to parse it
+	// The scheme will be added automatically, depending on the TLSInsure setting
+	endpoint := parseEndpoint(cfg)
+
 	var clientOptions []otlptracehttp.Option
 	clientOptions = append(clientOptions, otlptracehttp.WithEndpoint(endpoint),
 		otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),
-		otlptracehttp.WithHeaders(cfg.Headers))
+		otlptracehttp.WithHeaders(cfg.Headers),
+		otlptracehttp.WithTLSClientConfig(TLSConf))
 
-	if u.Scheme != "https" {
+	if cfg.TLSConfig.Insecure {
 		clientOptions = append(clientOptions, otlptracehttp.WithInsecure())
 	}
 
-	return otlptracehttp.NewClient(clientOptions...), nil
+	return otlptracehttp.NewClient(clientOptions...)
+}
+
+func parseEndpoint(cfg *config.OpenTelemetry) string {
+	endpoint := cfg.Endpoint
+	// Temporary adding scheme to get the host and port
+	if !strings.Contains(endpoint, "://") {
+		endpoint = "http://" + endpoint
+	}
+
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return cfg.Endpoint
+	}
+
+	host := u.Hostname()
+	port := u.Port()
+
+	if port == "" {
+		return host
+	}
+
+	return net.JoinHostPort(host, port)
 }
