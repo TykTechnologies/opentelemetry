@@ -5,7 +5,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
+
 	"net"
 	"net/url"
 	"strings"
@@ -117,11 +118,12 @@ func handleTLS(cfg *config.TLSConfig) (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		TLSConf.Certificates = []tls.Certificate{cert}
 	}
 
 	if cfg.CAFile != "" {
-		caPem, err := ioutil.ReadFile(cfg.CAFile)
+		caPem, err := os.ReadFile(cfg.CAFile)
 		if err != nil {
 			return nil, err
 		}
