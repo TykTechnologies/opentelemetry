@@ -2,6 +2,7 @@ package trace
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"testing"
 
 	"github.com/TykTechnologies/opentelemetry/config"
@@ -134,6 +135,86 @@ func TestSampler(t *testing.T) {
 				}
 			} else {
 				assert.Equal(t, tc.expected, sampled)
+			}
+		})
+	}
+}
+
+func TestSamplerParentBased(t *testing.T) {
+	idGenerator := defaultIDGenerator()
+
+	testCases := []struct {
+		name             string
+		samplerType      string
+		samplingRate     float64
+		parentBased      bool
+		parentSampled    bool
+		expectedDecision sdktrace.SamplingDecision
+	}{
+		{
+			name:             "ParentBased with TraceIDRatioBased and parent sampled",
+			samplerType:      "traceIDRatioBased",
+			samplingRate:     0.3,
+			parentBased:      true,
+			parentSampled:    true,
+			expectedDecision: sdktrace.RecordAndSample,
+		},
+		{
+			name:             "ParentBased with TraceIDRatioBased and parent not sampled",
+			samplerType:      "traceIDRatioBased",
+			samplingRate:     0.3,
+			parentBased:      true,
+			parentSampled:    false,
+			expectedDecision: sdktrace.Drop,
+		},
+		{
+			name:             "ParentBased with AlwaysOff and parent not sampled",
+			samplerType:      "alwaysOff",
+			samplingRate:     0.3,
+			parentBased:      true,
+			parentSampled:    false,
+			expectedDecision: sdktrace.Drop,
+		},
+		{
+			name:             "ParentBased with AlwaysOn and parent not sampled",
+			samplerType:      "AlwaysOn",
+			parentBased:      true,
+			parentSampled:    false,
+			expectedDecision: sdktrace.Drop,
+		},
+		{
+			name:             "ParentBased with AlwaysOn and parent sampled",
+			samplerType:      "AlwaysOn",
+			parentBased:      true,
+			parentSampled:    true,
+			expectedDecision: sdktrace.RecordAndSample,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sampler := getSampler(tc.samplerType, tc.samplingRate, tc.parentBased)
+
+			traceID, spanID := idGenerator.NewIDs(context.Background())
+
+			spanCtxConfig := trace.SpanContextConfig{
+				TraceID: traceID,
+				SpanID:  spanID,
+			}
+
+			if tc.parentSampled {
+				spanCtxConfig.TraceFlags = trace.FlagsSampled
+			}
+
+			parentCtx := trace.ContextWithSpanContext(
+				context.Background(),
+				trace.NewSpanContext(spanCtxConfig),
+			)
+
+			samplingParameters := sdktrace.SamplingParameters{ParentContext: parentCtx}
+
+			if got := sampler.ShouldSample(samplingParameters).Decision; got != tc.expectedDecision {
+				t.Errorf("Expected decision %v but got %v", tc.expectedDecision, got)
 			}
 		})
 	}
