@@ -2,16 +2,17 @@ package trace
 
 import (
 	"context"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
-	"net"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func Test_Shutdown(t *testing.T) {

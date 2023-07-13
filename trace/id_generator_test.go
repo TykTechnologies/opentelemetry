@@ -4,9 +4,10 @@ import (
 	"context"
 	crand "crypto/rand"
 	"encoding/binary"
-	oteltrace "go.opentelemetry.io/otel/trace"
 	"math/rand"
 	"sync"
+
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 func defaultIDGenerator() randomIDGenerator {
