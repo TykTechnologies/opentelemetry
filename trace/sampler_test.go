@@ -2,8 +2,9 @@ package trace
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/trace"
 	"testing"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/stretchr/testify/assert"
