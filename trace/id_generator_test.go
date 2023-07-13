@@ -13,7 +13,11 @@ import (
 func defaultIDGenerator() randomIDGenerator {
 	gen := randomIDGenerator{}
 	var rngSeed int64
-	_ = binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
+	err := binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
+	if err != nil {
+		return gen
+	}
+
 	gen.randSource = rand.New(rand.NewSource(rngSeed))
 	return gen
 }
