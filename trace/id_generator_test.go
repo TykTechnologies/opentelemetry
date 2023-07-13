@@ -10,8 +10,8 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func defaultIDGenerator() randomIDGenerator {
-	gen := randomIDGenerator{}
+func defaultIDGenerator() *randomIDGenerator {
+	gen := &randomIDGenerator{}
 	var rngSeed int64
 	err := binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
 	if err != nil {
