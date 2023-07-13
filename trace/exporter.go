@@ -50,7 +50,7 @@ func newGRPCClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Cl
 		otlptracegrpc.WithHeaders(cfg.Headers),
 	}
 
-	if cfg.TLSConfig.Disable {
+	if !cfg.TLSConfig.Enable {
 		clientOptions = append(clientOptions, otlptracegrpc.WithInsecure())
 	} else {
 		TLSConf, err := handleTLS(&cfg.TLSConfig)
@@ -73,7 +73,7 @@ func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Cl
 		otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),
 		otlptracehttp.WithHeaders(cfg.Headers))
 
-	if cfg.TLSConfig.Disable {
+	if !cfg.TLSConfig.Enable {
 		clientOptions = append(clientOptions, otlptracehttp.WithInsecure())
 	} else {
 		TLSConf, err := handleTLS(&cfg.TLSConfig)
