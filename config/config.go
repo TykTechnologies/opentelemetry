@@ -30,11 +30,16 @@ type OpenTelemetry struct {
 	// - "b3": b3 is a propagator serializes SpanContext to/from B3 multi Headers format.
 	// Defaults to "tracecontext"
 	ContextPropagation string `json:"context_propagation"`
+	// Sampling defines the configurations to use in the sampler
+	Sampling Sampling `json:"sampling"`
+}
+
+type Sampling struct {
 	// sampler_type refers to the policy used by OpenTelemetry to determine
 	// whether a particular trace should be sampled or not. It's determined at the
 	// start of a trace and the decision is propagated down the trace. Valid Values are:
 	// AlwaysOn, AlwaysOff and TraceIDRatioBased. It defaults to AlwaysOn
-	SamplingType string `json:"sampler_type"`
+	SamplerType string `json:"sampler_type"`
 	// sampling_rate is a parameter for the TraceIDRatioBased sampler type. It represents
 	// the percentage of traces to be sampled. The value should be a float between 0.0 (0%) and 1.0 (100%).
 	// If the sampling rate is 0.5, the sampler will aim to sample approximately 50% of traces.
@@ -94,11 +99,11 @@ func (c *OpenTelemetry) SetDefaults() {
 		c.ContextPropagation = PROPAGATOR_TRACECONTEXT
 	}
 
-	if c.SamplingType == "" {
-		c.SamplingType = ALWAYSON
+	if c.Sampling.SamplerType == "" {
+		c.Sampling.SamplerType = ALWAYSON
 	}
 
-	if c.SamplingRate == 0 {
-		c.SamplingRate = 0.5
+	if c.Sampling.SamplingRate == 0 {
+		c.Sampling.SamplingRate = 0.5
 	}
 }
