@@ -20,6 +20,7 @@ func defaultIDGenerator() *randomIDGenerator {
 	}
 
 	gen.randSource = rand.New(rand.NewSource(rngSeed))
+
 	return gen
 }
 
@@ -32,8 +33,10 @@ type randomIDGenerator struct {
 func (gen *randomIDGenerator) NewSpanID(ctx context.Context, traceID oteltrace.TraceID) oteltrace.SpanID {
 	gen.Lock()
 	defer gen.Unlock()
+
 	sid := oteltrace.SpanID{}
 	_, _ = gen.randSource.Read(sid[:])
+
 	return sid
 }
 
@@ -42,9 +45,11 @@ func (gen *randomIDGenerator) NewSpanID(ctx context.Context, traceID oteltrace.T
 func (gen *randomIDGenerator) NewIDs(ctx context.Context) (oteltrace.TraceID, oteltrace.SpanID) {
 	gen.Lock()
 	defer gen.Unlock()
+
 	tid := oteltrace.TraceID{}
 	_, _ = gen.randSource.Read(tid[:])
 	sid := oteltrace.SpanID{}
 	_, _ = gen.randSource.Read(sid[:])
+	
 	return tid, sid
 }
