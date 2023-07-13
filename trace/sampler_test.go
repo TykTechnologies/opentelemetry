@@ -23,7 +23,8 @@ func TestGetSampler(t *testing.T) {
 		{"lowered case alwaysoff", "alwaysoff", 0, false, "AlwaysOffSampler"},
 		{"TraceIDRatioBased-0", "TraceIDRatioBased", 0, true,
 			"ParentBased{root:TraceIDRatioBased{0},remoteParentSampled:AlwaysOnSampler," +
-				"remoteParentNotSampled:AlwaysOffSampler,localParentSampled:AlwaysOnSampler,localParentNotSampled:AlwaysOffSampler}"},
+				"remoteParentNotSampled:AlwaysOffSampler,localParentSampled:AlwaysOnSampler," +
+				"localParentNotSampled:AlwaysOffSampler}"},
 		{"TraceIDRatioBased-0.5", "TraceIDRatioBased", 0.5, false, "TraceIDRatioBased{0.5}"},
 		{"TraceIDRatioBased-1", "TraceIDRatioBased", 1, false, "AlwaysOnSampler"},
 		{"Invalid", "Invalid", 0, false, "AlwaysOnSampler"},
@@ -128,7 +129,8 @@ func TestSampler(t *testing.T) {
 				lowLimit := floatSamples * (tc.samplingRate - tolerance)
 				highLimit := floatSamples * (tc.samplingRate + tolerance)
 				if float64(sampled) > highLimit || float64(sampled) < lowLimit {
-					t.Errorf("number of samples is not in range. Got: %v, expected to be between %v and %v", sampled, lowLimit, highLimit)
+					t.Errorf("number of samples is not in range."+
+						" Got: %v, expected to be between %v and %v", sampled, lowLimit, highLimit)
 				}
 			} else {
 				assert.Equal(t, tc.expected, sampled)

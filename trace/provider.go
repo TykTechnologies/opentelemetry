@@ -99,7 +99,10 @@ func NewProvider(opts ...Option) (Provider, error) {
 	spanProcesor := spanProcessorFactory(provider.cfg.SpanProcessorType, exporter)
 
 	// create the sampler based on the configs
-	sampler := getSampler(provider.cfg.Sampling.SamplerType, provider.cfg.Sampling.SamplingRate, provider.cfg.Sampling.ParentBasedSampling)
+	samplerType := provider.cfg.Sampling.SamplerType
+	samplingRate := provider.cfg.Sampling.SamplingRate
+	parentBasedSampling := provider.cfg.Sampling.ParentBasedSampling
+	sampler := getSampler(samplerType, samplingRate, parentBasedSampling)
 
 	// Create the tracer provider
 	// The tracer provider will use the resource and exporter created previously

@@ -1,7 +1,6 @@
 package trace
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/TykTechnologies/opentelemetry/config"
@@ -25,7 +24,6 @@ func getSampler(samplingType string, samplingRate float64, parentBased bool) sdk
 			return sdktrace.NeverSample()
 		}
 	case strings.EqualFold(samplingType, config.TRACEIDRATIOBASED):
-		fmt.Println("will return a trace ID ratio sampler with sampling rate:", samplingRate)
 		if parentBased {
 			return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(samplingRate))
 		} else {
