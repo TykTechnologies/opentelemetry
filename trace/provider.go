@@ -142,19 +142,20 @@ func NewProvider(opts ...Option) (Provider, error) {
 
 func getSampler(samplingType string, samplingRate float64, parentBased bool) sdktrace.Sampler {
 	switch samplingType {
-	case "AlwaysOn":
+	case config.ALWAYSON:
 		if parentBased {
 			return sdktrace.ParentBased(sdktrace.AlwaysSample())
 		} else {
 			return sdktrace.AlwaysSample()
 		}
-	case "AlwaysOff":
+	case config.ALWAYSOFF:
 		if parentBased {
 			return sdktrace.ParentBased(sdktrace.NeverSample())
 		} else {
 			return sdktrace.NeverSample()
 		}
-	case "TraceIDRatioBased":
+	case config.TRACEIDRATIOBASED:
+		fmt.Println("will return a trace ID ratio sampler with sampling rate:", samplingRate)
 		if parentBased {
 			return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(samplingRate))
 		} else {
