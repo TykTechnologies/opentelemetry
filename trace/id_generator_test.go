@@ -50,6 +50,6 @@ func (gen *randomIDGenerator) NewIDs(ctx context.Context) (oteltrace.TraceID, ot
 	_, _ = gen.randSource.Read(tid[:])
 	sid := oteltrace.SpanID{}
 	_, _ = gen.randSource.Read(sid[:])
-	
+
 	return tid, sid
 }
