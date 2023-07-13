@@ -2,10 +2,11 @@ package trace
 
 import (
 	"context"
+	"testing"
+
 	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/stretchr/testify/assert"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"testing"
 )
 
 func TestGetSampler(t *testing.T) {
