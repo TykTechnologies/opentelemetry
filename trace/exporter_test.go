@@ -22,8 +22,9 @@ func Test_NewGRPCClient(t *testing.T) {
 		Endpoint: endpoint,
 	}
 
-	client := newGRPCClient(ctx, cfg)
+	client, err := newGRPCClient(ctx, cfg)
 	assert.NotNil(t, client)
+	assert.NoError(t, err)
 }
 
 func Test_NewHTTPClient(t *testing.T) {
@@ -34,8 +35,9 @@ func Test_NewHTTPClient(t *testing.T) {
 		Endpoint: endpoint,
 	}
 
-	client := newHTTPClient(ctx, cfg)
+	client, err := newHTTPClient(ctx, cfg)
 	assert.NotNil(t, client)
+	assert.NoError(t, err)
 }
 
 func Test_ExporterFactory(t *testing.T) {

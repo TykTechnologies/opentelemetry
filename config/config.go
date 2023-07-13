@@ -41,6 +41,12 @@ type TLSConfig struct {
 	// insecure_skip_verify is a flag that can be used to skip TLS verification if TLS is enabled.
 	// Defaults to false.
 	InsecureSkipVerify bool `json:"insecure_skip_verify"`
+	// ca_file is the path to the CA file.
+	CAFile string `json:"ca_file"`
+	// cert_file is the path to the cert file.
+	CertFile string `json:"cert_file"`
+	// key_file is the path to the key file.
+	KeyFile string `json:"key_file"`
 }
 
 const (

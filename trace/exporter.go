@@ -3,7 +3,9 @@ package trace
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/url"
 	"strings"
@@ -20,13 +22,18 @@ import (
 
 func exporterFactory(ctx context.Context, cfg *config.OpenTelemetry) (sdktrace.SpanExporter, error) {
 	var client otlptrace.Client
+	var err error
 	switch cfg.Exporter {
 	case config.GRPCEXPORTER:
-		client = newGRPCClient(ctx, cfg)
+		client, err = newGRPCClient(ctx, cfg)
 	case config.HTTPEXPORTER:
-		client = newHTTPClient(ctx, cfg)
+		client, err = newHTTPClient(ctx, cfg)
 	default:
-		return nil, fmt.Errorf("invalid exporter type: %s", cfg.Exporter)
+		err = fmt.Errorf("invalid exporter type: %s", cfg.Exporter)
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(cfg.ConnectionTimeout)*time.Second)
@@ -35,7 +42,7 @@ func exporterFactory(ctx context.Context, cfg *config.OpenTelemetry) (sdktrace.S
 	return otlptrace.New(ctx, client)
 }
 
-func newGRPCClient(ctx context.Context, cfg *config.OpenTelemetry) otlptrace.Client {
+func newGRPCClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Client, error) {
 	clientOptions := []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpoint(cfg.Endpoint),
 		otlptracegrpc.WithTimeout(time.Duration(cfg.ConnectionTimeout) * time.Second),
@@ -45,16 +52,17 @@ func newGRPCClient(ctx context.Context, cfg *config.OpenTelemetry) otlptrace.Cli
 	if cfg.TLSConfig.Disable {
 		clientOptions = append(clientOptions, otlptracegrpc.WithInsecure())
 	} else {
-		TLSConf := &tls.Config{
-			InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
+		TLSConf, err := handleTLS(&cfg.TLSConfig)
+		if err != nil {
+			return nil, err
 		}
 		clientOptions = append(clientOptions, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(TLSConf)))
 	}
 
-	return otlptracegrpc.NewClient(clientOptions...)
+	return otlptracegrpc.NewClient(clientOptions...), nil
 }
 
-func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) otlptrace.Client {
+func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Client, error) {
 	// OTel SDK does not support URL with scheme nor path, so we need to parse it
 	// The scheme will be added automatically, depending on the TLSInsure setting
 	endpoint := parseEndpoint(cfg)
@@ -67,13 +75,14 @@ func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) otlptrace.Cli
 	if cfg.TLSConfig.Disable {
 		clientOptions = append(clientOptions, otlptracehttp.WithInsecure())
 	} else {
-		TLSConf := &tls.Config{
-			InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
+		TLSConf, err := handleTLS(&cfg.TLSConfig)
+		if err != nil {
+			return nil, err
 		}
 		clientOptions = append(clientOptions, otlptracehttp.WithTLSClientConfig(TLSConf))
 	}
 
-	return otlptracehttp.NewClient(clientOptions...)
+	return otlptracehttp.NewClient(clientOptions...), nil
 }
 
 func parseEndpoint(cfg *config.OpenTelemetry) string {
@@ -96,4 +105,34 @@ func parseEndpoint(cfg *config.OpenTelemetry) string {
 	}
 
 	return net.JoinHostPort(host, port)
+}
+
+func handleTLS(cfg *config.TLSConfig) (*tls.Config, error) {
+	TLSConf := &tls.Config{
+		InsecureSkipVerify: cfg.InsecureSkipVerify,
+	}
+
+	if cfg.CertFile != "" && cfg.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		TLSConf.Certificates = []tls.Certificate{cert}
+	}
+
+	if cfg.CAFile != "" {
+		caPem, err := ioutil.ReadFile(cfg.CAFile)
+		if err != nil {
+			return nil, err
+		}
+
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(caPem) {
+			return nil, fmt.Errorf("failed to add CA certificate")
+		}
+
+		TLSConf.ClientCAs = certPool
+	}
+
+	return TLSConf, nil
 }
