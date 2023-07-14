@@ -17,9 +17,9 @@ func NewHTTPHandler(name string, handler http.Handler, tp Provider, attr ...Attr
 		otelhttp.WithSpanNameFormatter(httpSpanNameFormatter),
 	}
 	if len(attr) > 0 {
-		otelhttp.WithSpanOptions(
+		opts = append(opts, otelhttp.WithSpanOptions(
 			trace.WithAttributes(attr...),
-		)
+		))
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
