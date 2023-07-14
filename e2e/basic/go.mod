@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/TykTechnologies/opentelemetry v0.0.0-20230627083938-06db14948ffe
+	github.com/sirupsen/logrus v1.9.3
 	go.opentelemetry.io/otel v1.16.0
 )
 

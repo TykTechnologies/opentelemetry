@@ -89,7 +89,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 	}
 
 	// create the exporter - here's where connecting to the collector happens
-	exporter, err := exporterFactory(provider.ctx, provider.cfg)
+	exporter, err := exporterFactory(provider.ctx, provider)
 	if err != nil {
 		provider.logger.Error("failed to create exporter", err)
 		return provider, fmt.Errorf("failed to create exporter: %w", err)
@@ -133,7 +133,6 @@ func NewProvider(opts ...Option) (Provider, error) {
 	})
 
 	provider.logger.Info("Tracer provider initialized successfully")
-
 	return provider, nil
 }
 
