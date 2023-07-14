@@ -30,6 +30,28 @@ type OpenTelemetry struct {
 	// - "b3": b3 is a propagator serializes SpanContext to/from B3 multi Headers format.
 	// Defaults to "tracecontext"
 	ContextPropagation string `json:"context_propagation"`
+	// Sampling defines the configurations to use in the sampler
+	Sampling Sampling `json:"sampling"`
+}
+
+type Sampling struct {
+	// type refers to the policy used by OpenTelemetry to determine
+	// whether a particular trace should be sampled or not. It's determined at the
+	// start of a trace and the decision is propagated down the trace. Valid Values are:
+	// AlwaysOn, AlwaysOff and TraceIDRatioBased. It defaults to AlwaysOn
+	Type string `json:"type"`
+	// sampling_rate is a parameter for the TraceIDRatioBased sampler type. It represents
+	// the percentage of traces to be sampled. The value should be a float between 0.0 (0%) and 1.0 (100%).
+	// If the sampling rate is 0.5, the sampler will aim to sample approximately 50% of traces.
+	// it defaults to 0.5
+	Rate float64 `json:"rate"`
+	// parent_based is a rule that makes sure that if we decide to record data
+	// for a particular operation, we'll also record data for all the work that operation
+	// causes (its "child spans"). This helps keep the whole story of a transaction together.
+	// You usually use ParentBased with TraceIDRatioBased, because with AlwaysOn or AlwaysOff,
+	// you're either recording everything or nothing, so there are no decisions to respect.
+	// It defaults to false
+	ParentBased bool `json:"parent_based"`
 }
 
 const (
@@ -40,6 +62,11 @@ const (
 	// available context propagators
 	PROPAGATOR_TRACECONTEXT = "tracecontext"
 	PROPAGATOR_B3           = "b3"
+
+	// available sampler types
+	ALWAYSON          = "AlwaysOn"
+	ALWAYSOFF         = "AlwaysOff"
+	TRACEIDRATIOBASED = "TraceIDRatioBased"
 )
 
 // SetDefaults sets the default values for the OpenTelemetry config.
@@ -70,5 +97,13 @@ func (c *OpenTelemetry) SetDefaults() {
 
 	if c.ContextPropagation == "" {
 		c.ContextPropagation = PROPAGATOR_TRACECONTEXT
+	}
+
+	if c.Sampling.Type == "" {
+		c.Sampling.Type = ALWAYSON
+	}
+
+	if c.Sampling.Type == TRACEIDRATIOBASED && c.Sampling.Rate == 0 {
+		c.Sampling.Rate = 0.5
 	}
 }
