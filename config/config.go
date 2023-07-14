@@ -47,6 +47,14 @@ type TLSConfig struct {
 	CertFile string `json:"cert_file"`
 	// key_file is the path to the key file.
 	KeyFile string `json:"key_file"`
+	// max_version is the maximum TLS version that is supported.
+	// options: ["1.0", "1.1", "1.2", "1.3"]
+	// Defaults to "1.3"
+	MaxVersion string `json:"max_version"`
+	// min_version is the minimum TLS version that is supported.
+	// options: ["1.0", "1.1", "1.2", "1.3"]
+	// Defaults to "1.2"
+	MinVersion string `json:"min_version"`
 }
 
 const (
