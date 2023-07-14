@@ -133,7 +133,7 @@ func handleTLS(cfg *config.TLSConfig) (*tls.Config, error) {
 			return nil, fmt.Errorf("failed to add CA certificate")
 		}
 
-		TLSConf.ClientCAs = certPool
+		TLSConf.RootCAs = certPool
 	}
 
 	return TLSConf, nil
