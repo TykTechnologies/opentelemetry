@@ -45,7 +45,7 @@ func TestGetSampler(t *testing.T) {
 
 func TestSampler(t *testing.T) {
 	// take a good amount of samples, so it works better with ratio based sampler
-	const samples = 2000
+	const samples = 5000
 
 	type testCase struct {
 		name         string
