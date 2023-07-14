@@ -19,12 +19,14 @@ spec:
     - attr:http.method  =  "GET"
     - attr:http.status_code  =  200
     - attr:tracetest.span.name = "GET /test"
+    - attr:tyk.api.name = "test"
+    - attr:tyk.api.orgid = "fakeorg"
   - name: Check if http span has one child span
     selector: span[tracetest.span.type="http"]
     assertions:
     - attr:tracetest.selected_spans.count = 1
   - name: Check main span custom attributes
-    selector: span[tracetest.span.type="general" name="main"]
+    selector: span[tracetest.span.type="general" name="childspan"]
     assertions:
     - attr:test-string-attr   =   "value"
     - attr:test-int-attr  =  1
