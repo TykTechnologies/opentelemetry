@@ -32,8 +32,8 @@ func Test_SetDefault(t *testing.T) {
 				SpanProcessorType:  "simple",
 				ContextPropagation: "b3",
 				Sampling: Sampling{
-					SamplerType:  TRACEIDRATIOBASED,
-					SamplingRate: 0.8,
+					Type: TRACEIDRATIOBASED,
+					Rate: 0.8,
 				},
 			},
 			expectedCfg: OpenTelemetry{
@@ -45,8 +45,8 @@ func Test_SetDefault(t *testing.T) {
 				SpanProcessorType:  "simple",
 				ContextPropagation: "b3",
 				Sampling: Sampling{
-					SamplerType:  TRACEIDRATIOBASED,
-					SamplingRate: 0.8,
+					Type: TRACEIDRATIOBASED,
+					Rate: 0.8,
 				},
 			},
 		},
@@ -64,8 +64,29 @@ func Test_SetDefault(t *testing.T) {
 				SpanProcessorType:  "batch",
 				ContextPropagation: "tracecontext",
 				Sampling: Sampling{
-					SamplerType:  ALWAYSON,
-					SamplingRate: 0.5,
+					Type: ALWAYSON,
+				},
+			},
+		},
+		{
+			name: "default sampling rate",
+			givenCfg: OpenTelemetry{
+				Enabled: true,
+				Sampling: Sampling{
+					Type: TRACEIDRATIOBASED,
+				},
+			},
+			expectedCfg: OpenTelemetry{
+				Enabled:            true,
+				Exporter:           "grpc",
+				Endpoint:           "localhost:4317",
+				ConnectionTimeout:  1,
+				ResourceName:       "tyk",
+				SpanProcessorType:  "batch",
+				ContextPropagation: "tracecontext",
+				Sampling: Sampling{
+					Type: TRACEIDRATIOBASED,
+					Rate: 0.5,
 				},
 			},
 		},
