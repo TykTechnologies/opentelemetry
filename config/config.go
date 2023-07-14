@@ -39,7 +39,7 @@ type Sampling struct {
 	// whether a particular trace should be sampled or not. It's determined at the
 	// start of a trace and the decision is propagated down the trace. Valid Values are:
 	// AlwaysOn, AlwaysOff and TraceIDRatioBased. It defaults to AlwaysOn
-	Type string `json:"sampler_type"`
+	Type string `json:"type"`
 	// sampling_rate is a parameter for the TraceIDRatioBased sampler type. It represents
 	// the percentage of traces to be sampled. The value should be a float between 0.0 (0%) and 1.0 (100%).
 	// If the sampling rate is 0.5, the sampler will aim to sample approximately 50% of traces.
