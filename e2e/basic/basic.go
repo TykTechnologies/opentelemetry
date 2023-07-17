@@ -26,7 +26,7 @@ func main() {
 		Endpoint:          "otel-collector:4317",
 		ConnectionTimeout: 10,
 		ResourceName:      "e2e-basic",
-		TLSConfig: config.TLSConfig{
+		TLS: config.TLS{
 			Enable: false,
 		},
 	}

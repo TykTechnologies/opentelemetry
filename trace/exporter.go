@@ -51,10 +51,10 @@ func newGRPCClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Cl
 		otlptracegrpc.WithHeaders(cfg.Headers),
 	}
 
-	if !cfg.TLSConfig.Enable {
+	if !cfg.TLS.Enable {
 		clientOptions = append(clientOptions, otlptracegrpc.WithInsecure())
 	} else {
-		TLSConf, err := handleTLS(&cfg.TLSConfig)
+		TLSConf, err := handleTLS(&cfg.TLS)
 		if err != nil {
 			return nil, err
 		}
@@ -74,10 +74,10 @@ func newHTTPClient(ctx context.Context, cfg *config.OpenTelemetry) (otlptrace.Cl
 		otlptracehttp.WithTimeout(time.Duration(cfg.ConnectionTimeout)*time.Second),
 		otlptracehttp.WithHeaders(cfg.Headers))
 
-	if !cfg.TLSConfig.Enable {
+	if !cfg.TLS.Enable {
 		clientOptions = append(clientOptions, otlptracehttp.WithInsecure())
 	} else {
-		TLSConf, err := handleTLS(&cfg.TLSConfig)
+		TLSConf, err := handleTLS(&cfg.TLS)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +109,7 @@ func parseEndpoint(cfg *config.OpenTelemetry) string {
 	return net.JoinHostPort(host, port)
 }
 
-func handleTLS(cfg *config.TLSConfig) (*tls.Config, error) {
+func handleTLS(cfg *config.TLS) (*tls.Config, error) {
 	TLSConf := &tls.Config{
 		InsecureSkipVerify: cfg.InsecureSkipVerify,
 	}
@@ -148,7 +148,7 @@ func handleTLS(cfg *config.TLSConfig) (*tls.Config, error) {
 	return TLSConf, nil
 }
 
-func handleTLSVersion(cfg *config.TLSConfig) (minVersion, maxVersion int, err error) {
+func handleTLSVersion(cfg *config.TLS) (minVersion, maxVersion int, err error) {
 	validVersions := map[string]int{
 		"1.0": tls.VersionTLS10,
 		"1.1": tls.VersionTLS11,
