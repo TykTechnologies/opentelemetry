@@ -23,6 +23,9 @@ const (
 
 	// equivalent to Tyk Pump Tags(tags)
 	TykAPITagsKey = attribute.Key(TykAPIPrefix + "tags")
+
+	// equivalent to Tyk Pump API Listen Path (path/raw_path)
+	TykAPIListenPathKey = attribute.Key(TykAPIPrefix + "path")
 )
 
 // Version related attributes
@@ -69,6 +72,13 @@ func TykAPIVersion(version string) trace.Attribute {
 // of the Tyk API.
 func TykAPIOrgID(orgid string) trace.Attribute {
 	return TykAPIOrgIDKey.String(orgid)
+}
+
+// TykAPIListenPath returns an attribute KeyValue conforming to the
+// "tyk.api.path" semantic convention. It represents the listen path
+// of the Tyk API.
+func TykAPIListenPath(path string) trace.Attribute {
+	return TykAPIListenPathKey.String(path)
 }
 
 // TykAPITags returns an attribute KeyValue conforming to the
