@@ -32,7 +32,7 @@ type OpenTelemetry struct {
 	ContextPropagation string `json:"context_propagation"`
 	// tls is the TLS configuration for the exporter.
 	TLS TLS `json:"tls"`
-  // Sampling defines the configurations to use in the sampler
+	// Sampling defines the configurations to use in the sampler
 	Sampling Sampling `json:"sampling"`
 }
 
