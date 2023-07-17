@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/TykTechnologies/opentelemetry/config"
+	semconv "github.com/TykTechnologies/opentelemetry/semconv/v1.0.0"
 	"github.com/TykTechnologies/opentelemetry/trace"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 func main() {
@@ -35,15 +35,19 @@ func main() {
 		return
 	}
 
+	baseTykAttributes := []trace.Attribute{
+		semconv.TykAPIName("test"),
+		semconv.TykAPIOrgID("fakeorg"),
+	}
+
 	mux := http.NewServeMux()
 	mux.Handle("/test", trace.NewHTTPHandler("get_test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, span := provider.Tracer().Start(r.Context(), "main")
+		_, span := provider.Tracer().Start(r.Context(), "childspan")
 		defer span.End()
 
-		span.AddEvent("test event")
-		attributes := []attribute.KeyValue{
-			attribute.String("test-string-attr", "value"),
-			attribute.Int("test-int-attr", 1),
+		attributes := []trace.Attribute{
+			trace.NewAttribute("test-string-attr", "value"),
+			trace.NewAttribute("test-int-attr", 1),
 		}
 		span.SetAttributes(attributes...)
 
@@ -57,7 +61,7 @@ func main() {
 			log.Printf("error on encode response %s", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-	}), provider))
+	}), provider, baseTykAttributes...))
 
 	srv := &http.Server{
 		Addr:    ":8080",
