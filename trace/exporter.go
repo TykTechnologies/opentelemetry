@@ -159,6 +159,7 @@ func handleTLSVersion(cfg *config.TLS) (minVersion, maxVersion int, err error) {
 	if cfg.MaxVersion == "" {
 		cfg.MaxVersion = "1.3"
 	}
+
 	if _, ok := validVersions[cfg.MaxVersion]; ok {
 		maxVersion = validVersions[cfg.MaxVersion]
 	} else {
@@ -169,6 +170,7 @@ func handleTLSVersion(cfg *config.TLS) (minVersion, maxVersion int, err error) {
 	if cfg.MinVersion == "" {
 		cfg.MinVersion = "1.2"
 	}
+
 	if _, ok := validVersions[cfg.MinVersion]; ok {
 		minVersion = validVersions[cfg.MinVersion]
 	} else {
@@ -177,7 +179,10 @@ func handleTLSVersion(cfg *config.TLS) (minVersion, maxVersion int, err error) {
 	}
 
 	if minVersion > maxVersion {
-		err = errors.New("MinVersion is higher than MaxVersion. Please specify a valid MinVersion that is lower or equal to MaxVersion")
+		err = errors.New(
+			"MinVersion is higher than MaxVersion. Please specify a valid MinVersion that is lower or equal to MaxVersion",
+		)
+
 		return
 	}
 
