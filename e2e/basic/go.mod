@@ -2,11 +2,13 @@ module e2e-basic
 
 go 1.19
 
+
 require (
 	github.com/TykTechnologies/opentelemetry v0.0.0-20230627083938-06db14948ffe
 	github.com/sirupsen/logrus v1.9.3
 	go.opentelemetry.io/otel v1.16.0
 )
+
 
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
@@ -17,6 +19,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.42.0 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.17.0 // indirect
+	go.opentelemetry.io/otel v1.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.16.0 // indirect

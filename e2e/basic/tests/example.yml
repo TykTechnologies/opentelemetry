@@ -12,19 +12,21 @@ spec:
       - key: Content-Type
         value: application/json
   specs:
-  - name: Check main span - http.method, http.scheme and http.status_code
+  - name: Check main span - http.method, http.scheme, http.status_code, tyk.api.name, and tyk.api.orgid
     selector: span[tracetest.span.type="http" name="GET /test" http.method="GET"]
     assertions:
     - attr:http.scheme  =  "http"
     - attr:http.method  =  "GET"
     - attr:http.status_code  =  200
     - attr:tracetest.span.name = "GET /test"
+    - attr:tyk.api.name = "test"
+    - attr:tyk.api.orgid = "fakeorg"
   - name: Check if http span has one child span
     selector: span[tracetest.span.type="http"]
     assertions:
     - attr:tracetest.selected_spans.count = 1
   - name: Check main span custom attributes
-    selector: span[tracetest.span.type="general" name="main"]
+    selector: span[tracetest.span.type="general" name="childspan"]
     assertions:
     - attr:test-string-attr   =   "value"
     - attr:test-int-attr  =  1
