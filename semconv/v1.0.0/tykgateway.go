@@ -13,16 +13,16 @@ const (
 // Attributes that should be present on all the Tyk Gateway API traces
 const (
 	// represents the gateway ID
-	TykGWIDKey = attribute.Key(TykAPIPrefix + "id")
+	TykGWIDKey = attribute.Key(TykGWPrefix + "id")
 
 	// represents if the gateway is hybrid
-	TykGWHybridKey = attribute.Key(TykAPIPrefix + "hybrid")
+	TykGWHybridKey = attribute.Key(TykGWPrefix + "hybrid")
 
 	// represents the group id of the hybrid gateway
-	TykHybridGWGroupIDKey = attribute.Key(TykAPIPrefix + "group.id")
+	TykHybridGWGroupIDKey = attribute.Key(TykGWPrefix + "group.id")
 
 	// represents the group id of the hybrid gateway
-	TykGWSegmentTagsKey = attribute.Key(TykAPIPrefix + "tags")
+	TykGWSegmentTagsKey = attribute.Key(TykGWPrefix + "tags")
 )
 
 // TykGWIDKey returns an attribute KeyValue conforming to the
