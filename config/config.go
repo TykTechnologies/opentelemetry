@@ -30,8 +30,33 @@ type OpenTelemetry struct {
 	// - "b3": b3 is a propagator serializes SpanContext to/from B3 multi Headers format.
 	// Defaults to "tracecontext"
 	ContextPropagation string `json:"context_propagation"`
+	// tls is the TLS configuration for the exporter.
+	TLS TLS `json:"tls"`
 	// Sampling defines the configurations to use in the sampler
 	Sampling Sampling `json:"sampling"`
+}
+
+type TLS struct {
+	// enable is a flag that can be used to enable TLS.
+	// Defaults to false (disabled).
+	Enable bool `json:"enable"`
+	// insecure_skip_verify is a flag that can be used to skip TLS verification if TLS is enabled.
+	// Defaults to false.
+	InsecureSkipVerify bool `json:"insecure_skip_verify"`
+	// ca_file is the path to the CA file.
+	CAFile string `json:"ca_file"`
+	// cert_file is the path to the cert file.
+	CertFile string `json:"cert_file"`
+	// key_file is the path to the key file.
+	KeyFile string `json:"key_file"`
+	// max_version is the maximum TLS version that is supported.
+	// options: ["1.0", "1.1", "1.2", "1.3"]
+	// Defaults to "1.3"
+	MaxVersion string `json:"max_version"`
+	// min_version is the minimum TLS version that is supported.
+	// options: ["1.0", "1.1", "1.2", "1.3"]
+	// Defaults to "1.2"
+	MinVersion string `json:"min_version"`
 }
 
 type Sampling struct {

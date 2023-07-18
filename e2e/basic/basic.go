@@ -13,6 +13,7 @@ import (
 	"github.com/TykTechnologies/opentelemetry/config"
 	semconv "github.com/TykTechnologies/opentelemetry/semconv/v1.0.0"
 	"github.com/TykTechnologies/opentelemetry/trace"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -25,11 +26,14 @@ func main() {
 		Endpoint:          "otel-collector:4317",
 		ConnectionTimeout: 10,
 		ResourceName:      "e2e-basic",
+		TLS: config.TLS{
+			Enable: false,
+		},
 	}
 
 	log.Println("Initializing OpenTelemetry at e2e-basic:", cfg.Endpoint)
 
-	provider, err := trace.NewProvider(trace.WithContext(ctx), trace.WithConfig(&cfg))
+	provider, err := trace.NewProvider(trace.WithContext(ctx), trace.WithConfig(&cfg), trace.WithLogger(logrus.New()))
 	if err != nil {
 		log.Printf("error on otel provider init %s", err.Error())
 		return

@@ -22,8 +22,9 @@ func Test_NewGRPCClient(t *testing.T) {
 		Endpoint: endpoint,
 	}
 
-	client := newGRPCClient(ctx, cfg)
+	client, err := newGRPCClient(ctx, cfg)
 	assert.NotNil(t, client)
+	assert.NoError(t, err)
 }
 
 func Test_NewHTTPClient(t *testing.T) {
@@ -34,8 +35,9 @@ func Test_NewHTTPClient(t *testing.T) {
 		Endpoint: endpoint,
 	}
 
-	client := newHTTPClient(ctx, cfg)
+	client, err := newHTTPClient(ctx, cfg)
 	assert.NotNil(t, client)
+	assert.NoError(t, err)
 }
 
 func Test_ExporterFactory(t *testing.T) {
@@ -117,6 +119,31 @@ func Test_ExporterFactory(t *testing.T) {
 			} else {
 				assert.Nil(t, err)
 				assert.NotNil(t, exporter)
+			}
+		})
+	}
+}
+
+func TestParseEndpoint(t *testing.T) {
+	testCases := []struct {
+		name     string
+		endpoint string
+		want     string
+	}{
+		{"with http and port", "http://example.com:8080", "example.com:8080"},
+		{"with https and port", "https://example.com:8080", "example.com:8080"},
+		{"with http without port", "http://example.com", "example.com"},
+		{"with https without port", "https://example.com", "example.com"},
+		{"without http and with port", "example.com:8080", "example.com:8080"},
+		{"without http and port", "example.com", "example.com"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &config.OpenTelemetry{Endpoint: tc.endpoint}
+			got := parseEndpoint(cfg)
+			if got != tc.want {
+				t.Errorf("parseEndpoint(%q) = %q; want %q", tc.endpoint, got, tc.want)
 			}
 		})
 	}
