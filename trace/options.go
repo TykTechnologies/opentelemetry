@@ -79,3 +79,35 @@ func WithContext(ctx context.Context) Option {
 		},
 	}
 }
+
+func WithServiceID(id string) Option {
+	return &opts{
+		fn: func(tp *traceProvider) {
+			tp.resources.id = id
+		},
+	}
+}
+
+func WithServiceVersion(version string) Option {
+	return &opts{
+		fn: func(tp *traceProvider) {
+			tp.resources.id = version
+		},
+	}
+}
+
+func WithHostDetector() Option {
+	return &opts{
+		fn: func(tp *traceProvider) {
+			tp.resources.withHost = true
+		},
+	}
+}
+
+func WithContainerDetector() Option {
+	return &opts{
+		fn: func(tp *traceProvider) {
+			tp.resources.withContainer = true
+		},
+	}
+}

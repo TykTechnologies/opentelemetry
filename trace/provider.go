@@ -38,6 +38,8 @@ type traceProvider struct {
 
 	ctx          context.Context
 	providerType string
+
+	resources resourceConfig
 }
 
 /*
@@ -82,7 +84,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 	}
 
 	// create the resource
-	resource, err := resourceFactory(provider.ctx, provider.cfg.ResourceName)
+	resource, err := resourceFactory(provider.ctx, provider.cfg.ResourceName, provider.resources)
 	if err != nil {
 		provider.logger.Error("failed to create exporter", err)
 		return provider, fmt.Errorf("failed to create resource: %w", err)
