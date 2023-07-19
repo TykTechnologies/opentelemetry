@@ -80,6 +80,17 @@ func WithContext(ctx context.Context) Option {
 	}
 }
 
+/*
+	WithServiceID sets the resource service.id for the tracer provider
+	This is useful to identify service instance on the trace resource.
+
+Example
+
+	provider, err := trace.NewProvider(trace.WithServiceID("instance-id"))
+	if err != nil {
+		panic(err)
+	}
+*/
 func WithServiceID(id string) Option {
 	return &opts{
 		fn: func(tp *traceProvider) {
@@ -88,14 +99,36 @@ func WithServiceID(id string) Option {
 	}
 }
 
+/*
+	WithServiceVersion sets the resource service.version for the tracer provider
+	This is useful to identify service version on the trace resource.
+
+Example
+
+	provider, err := trace.NewProvider(trace.WithServiceVersion("v4.0.5"))
+	if err != nil {
+		panic(err)
+	}
+*/
 func WithServiceVersion(version string) Option {
 	return &opts{
 		fn: func(tp *traceProvider) {
-			tp.resources.id = version
+			tp.resources.version = version
 		},
 	}
 }
 
+/*
+	WithHostDetector sets the resource service.version for the tracer provider
+	This is will add attributes from the host to the configured resource.
+
+Example
+
+	provider, err := trace.NewProvider(trace.WithHostDetector())
+	if err != nil {
+		panic(err)
+	}
+*/
 func WithHostDetector() Option {
 	return &opts{
 		fn: func(tp *traceProvider) {
@@ -104,6 +137,17 @@ func WithHostDetector() Option {
 	}
 }
 
+/*
+	WithContainerDetector sets the resource service.version for the tracer provider
+	This is will add attributes from the container to the configured resource.
+
+Example
+
+	provider, err := trace.NewProvider(trace.WithContainerDetector())
+	if err != nil {
+		panic(err)
+	}
+*/
 func WithContainerDetector() Option {
 	return &opts{
 		fn: func(tp *traceProvider) {

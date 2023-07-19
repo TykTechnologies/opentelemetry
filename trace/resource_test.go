@@ -38,7 +38,6 @@ func Test_ResourceFactory_base(t *testing.T) {
 }
 
 func TestResourceFactory(t *testing.T) {
-
 	currentHost, err := os.Hostname()
 	assert.Nil(t, err)
 
@@ -85,7 +84,7 @@ func TestResourceFactory(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			//special scenario to unit test - we cannot see the container attrs here
+			// special scenario to unit test - we cannot see the container attrs here
 			name:         "Test with container",
 			resourceName: "testResource",
 			cfg: resourceConfig{

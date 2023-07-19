@@ -57,3 +57,31 @@ func Test_WithConfig(t *testing.T) {
 	assert.NotNil(t, tp.cfg)
 	assert.IsType(t, cfg, *tp.cfg)
 }
+
+func Test_WithServiceID(t *testing.T) {
+	tp := &traceProvider{}
+	WithServiceID("id1").apply(tp)
+
+	assert.Equal(t, "id1", tp.resources.id)
+}
+
+func Test_WithServiceVersion(t *testing.T) {
+	tp := &traceProvider{}
+	WithServiceVersion("v1").apply(tp)
+
+	assert.Equal(t, "v1", tp.resources.version)
+}
+
+func Test_WithHostDetector(t *testing.T) {
+	tp := &traceProvider{}
+	WithHostDetector().apply(tp)
+
+	assert.Equal(t, true, tp.resources.withHost)
+}
+
+func Test_WithContainerDetector(t *testing.T) {
+	tp := &traceProvider{}
+	WithContainerDetector().apply(tp)
+
+	assert.Equal(t, true, tp.resources.withContainer)
+}

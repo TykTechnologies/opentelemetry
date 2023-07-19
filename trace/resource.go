@@ -26,14 +26,15 @@ func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfi
 	if cfg.id != "" {
 		attrs = append(attrs, semconv.ServiceInstanceID(cfg.id))
 	}
+
 	if cfg.version != "" {
 		attrs = append(attrs, semconv.ServiceVersion(cfg.version))
 	}
+
 	opts = append(opts, resource.WithAttributes(attrs...))
 
 	if cfg.withContainer {
 		opts = append(opts, resource.WithContainer())
-		opts = append(opts, resource.WithContainerID())
 	}
 
 	if cfg.withHost {
