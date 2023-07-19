@@ -41,6 +41,7 @@ func main() {
 		trace.WithServiceVersion("v1"),
 		trace.WithHostDetector(),
 		trace.WithContainerDetector(),
+		trace.WithProcessDetector(),
 	)
 	if err != nil {
 		log.Printf("error on otel provider init %s", err.Error())

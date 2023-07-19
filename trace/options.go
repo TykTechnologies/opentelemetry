@@ -119,8 +119,7 @@ func WithServiceVersion(version string) Option {
 }
 
 /*
-	WithHostDetector sets the resource service.version for the tracer provider
-	This is will add attributes from the host to the configured resource.
+	WithHostDetector adds attributes from the host to the configured resource.
 
 Example
 
@@ -138,8 +137,7 @@ func WithHostDetector() Option {
 }
 
 /*
-	WithContainerDetector sets the resource service.version for the tracer provider
-	This is will add attributes from the container to the configured resource.
+	WithContainerDetector adds attributes from the container to the configured resource.
 
 Example
 
@@ -152,6 +150,25 @@ func WithContainerDetector() Option {
 	return &opts{
 		fn: func(tp *traceProvider) {
 			tp.resources.withContainer = true
+		},
+	}
+}
+
+/*
+	WithProcessDetector adds attributes from the process to the configured resource.
+
+Example
+
+	provider, err := trace.NewProvider(trace.WithProcessDetector())
+	if err != nil {
+		panic(err)
+	}
+*/
+
+func WithProcessDetector() Option {
+	return &opts{
+		fn: func(tp *traceProvider) {
+			tp.resources.withProcess = true
 		},
 	}
 }

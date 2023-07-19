@@ -85,3 +85,10 @@ func Test_WithContainerDetector(t *testing.T) {
 
 	assert.Equal(t, true, tp.resources.withContainer)
 }
+
+func Test_WithProcessDetector(t *testing.T) {
+	tp := &traceProvider{}
+	WithProcessDetector().apply(tp)
+
+	assert.Equal(t, true, tp.resources.withProcess)
+}

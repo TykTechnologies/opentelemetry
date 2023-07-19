@@ -14,6 +14,7 @@ type resourceConfig struct {
 
 	withHost      bool
 	withContainer bool
+	withProcess   bool
 }
 
 func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfig) (*resource.Resource, error) {
@@ -39,6 +40,10 @@ func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfi
 
 	if cfg.withHost {
 		opts = append(opts, resource.WithHost())
+	}
+
+	if cfg.withProcess {
+		opts = append(opts, resource.WithProcess())
 	}
 
 	return resource.New(ctx, opts...)
