@@ -10,33 +10,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-func Test_ResourceFactory_base(t *testing.T) {
-	ctx := context.Background()
-	resourceName := "test-service"
-
-	res, err := resourceFactory(ctx, resourceName, resourceConfig{})
-
-	assert.Nil(t, err)
-
-	attrs := res.Attributes()
-
-	assert.Equal(t, res.Len(), 1)
-
-	found := false
-
-	for _, attr := range attrs {
-		if attr.Key == semconv.ServiceNameKey {
-			found = true
-
-			assert.Equal(t, resourceName, attr.Value.AsString())
-
-			break
-		}
-	}
-
-	assert.True(t, found)
-}
-
 func TestResourceFactory(t *testing.T) {
 	currentHost, err := os.Hostname()
 	assert.Nil(t, err)
