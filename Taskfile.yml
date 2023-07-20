@@ -39,4 +39,4 @@ tasks:
     cmds:
       - task: test:e2e:setup
       - task: test:e2e:test
-      - task: test:e2e
+      - task: test:e2e:stop

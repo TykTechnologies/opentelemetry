@@ -23,9 +23,9 @@ jobs:
         with:
           go-version: 1.19  
       - name: Setup e2e
-        run: task e2e-setup
+        run: task test:e2e:setup
       - name: Run e2e tests
-        run: task e2e-test
+        run: task test:e2e:test
       - name: Stop e2e
         if: always()
-        run: task e2e-stop
+        run: task test:e2e:stop
