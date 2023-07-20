@@ -1,0 +1,18 @@
+version: "3"
+
+tasks:
+  default:
+    desc: "Install and configure tracetest cli"
+    deps:
+      - install
+    cmds:
+      - tracetest configure -g --endpoint http://localhost:11633
+
+
+  install:
+    internal: true
+    desc: "Install tracetest"
+    status:
+      - type tracetest
+    cmds:
+      - curl -L https://raw.githubusercontent.com/kubeshop/tracetest/main/install-cli.sh | sudo bash -- v0.12.2

@@ -1,40 +1,42 @@
 version: '3'
 
 includes:
-  helper: ./e2e/helper_{{OS}}.yml
+  tracetest: ./.taskfiles/tracetest/Taskfile.yml
 
 tasks:
   build:
     desc: Build the project
     cmds:
       - go build -v ./...
+
   test:
     desc: Run unit tests
     cmds:
       - go test -v -race -vet=off ./...
 
-  e2e-setup:
+  test:e2e:setup:
     desc: Install e2e test - start e2e/basic app, tracetest and otel-collector
+    deps:
+      - tracetest
+    status:
+      - tracetest version
     cmds:
-    - task: helper:install-tracetest
     - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml up -d --build
     - tracetest configure -g --endpoint http://localhost:11633
-    - sleep 2;
-    - tracetest version
 
-  e2e-test: 
+  test:e2e:test: 
     desc: Run e2e tests scenarios with tracetest
     cmds:
      - tracetest run test -f ./e2e/basic/tests/example.yml --required-gates test-specs -o pretty
 
-  e2e-stop:
+  test:e2e:stop:
     desc: Stop e2e enviroment.
     cmds:
       - docker compose  -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml down --remove-orphans
 
-  e2e:
+  test:e2e:
     desc: Install, run and clean e2e tests
     cmds:
-      - task: e2e-setup
-      - task: e2e-test
-      - task: e2e-stop
+      - task: test:e2e:setup
+      - task: test:e2e:test
+      - task: test:e2e
