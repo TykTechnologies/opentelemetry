@@ -27,7 +27,7 @@ tasks:
   test:e2e:test: 
     desc: Run e2e tests scenarios with tracetest
     cmds:
-     - tracetest run test -f ./e2e/basic/tests/example.yml --required-gates test-specs -o pretty
+     - tracetest test run -d ./e2e/basic/tests/example.yml -w -o pretty
 
   test:e2e:stop:
     desc: Stop e2e enviroment.
