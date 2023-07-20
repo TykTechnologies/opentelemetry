@@ -15,4 +15,4 @@ tasks:
     status:
       - type tracetest
     cmds:
-      - curl -L https://raw.githubusercontent.com/kubeshop/tracetest/main/install-cli.sh | sudo bash -- v0.12.2
+      - curl -L https://raw.githubusercontent.com/kubeshop/tracetest/main/install-cli.sh | sudo bash -- 0.12.2
