@@ -3,15 +3,48 @@ package trace
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-func resourceFactory(ctx context.Context, resourceName string) (*resource.Resource, error) {
-	return resource.New(ctx,
-		resource.WithAttributes(
-			// the service name used to display traces in backends
-			semconv.ServiceNameKey.String(resourceName),
-		),
-	)
+type resourceConfig struct {
+	id      string
+	version string
+
+	withHost      bool
+	withContainer bool
+	withProcess   bool
+}
+
+func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfig) (*resource.Resource, error) {
+	opts := []resource.Option{}
+
+	attrs := []attribute.KeyValue{
+		semconv.ServiceNameKey.String(resourceName),
+	}
+
+	if cfg.id != "" {
+		attrs = append(attrs, semconv.ServiceInstanceID(cfg.id))
+	}
+
+	if cfg.version != "" {
+		attrs = append(attrs, semconv.ServiceVersion(cfg.version))
+	}
+
+	opts = append(opts, resource.WithAttributes(attrs...))
+
+	if cfg.withContainer {
+		opts = append(opts, resource.WithContainer())
+	}
+
+	if cfg.withHost {
+		opts = append(opts, resource.WithHost())
+	}
+
+	if cfg.withProcess {
+		opts = append(opts, resource.WithProcess())
+	}
+
+	return resource.New(ctx, opts...)
 }

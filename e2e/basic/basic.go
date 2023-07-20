@@ -33,7 +33,16 @@ func main() {
 
 	log.Println("Initializing OpenTelemetry at e2e-basic:", cfg.Endpoint)
 
-	provider, err := trace.NewProvider(trace.WithContext(ctx), trace.WithConfig(&cfg), trace.WithLogger(logrus.New()))
+	provider, err := trace.NewProvider(
+		trace.WithContext(ctx),
+		trace.WithConfig(&cfg),
+		trace.WithLogger(logrus.New()),
+		trace.WithServiceID("service-id-1"),
+		trace.WithServiceVersion("v1"),
+		trace.WithHostDetector(),
+		trace.WithContainerDetector(),
+		trace.WithProcessDetector(),
+	)
 	if err != nil {
 		log.Printf("error on otel provider init %s", err.Error())
 		return
