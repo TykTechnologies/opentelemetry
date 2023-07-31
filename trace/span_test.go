@@ -57,6 +57,7 @@ func TestContextWithSpan(t *testing.T) {
 		WithConfig(&config.OpenTelemetry{Enabled: true}),
 	)
 	assert.NoError(t, err)
+
 	_, sampleSpan := provider.Tracer().Start(context.Background(), "sample span")
 
 	ctx := ContextWithSpan(context.Background(), sampleSpan)
