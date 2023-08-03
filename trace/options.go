@@ -178,7 +178,7 @@ func WithProcessDetector() Option {
 
 Example
 
-	attrs := []trace.Attribute{semconv.TykHybridGWGroupID("groupID")}
+	attrs := []trace.Attribute{trace.NewAttribute("key", "value")}
 	provider, err := trace.NewProvider(trace.WithCustomResourceAttributes(attrs...))
 	if err != nil {
 		panic(err)
