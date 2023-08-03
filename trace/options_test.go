@@ -7,6 +7,7 @@ import (
 	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func Test_WithLogger(t *testing.T) {
@@ -91,4 +92,13 @@ func Test_WithProcessDetector(t *testing.T) {
 	WithProcessDetector().apply(tp)
 
 	assert.Equal(t, true, tp.resources.withProcess)
+}
+
+func Test_WithCustomResourceAttributes(t *testing.T) {
+	tp := &traceProvider{}
+	attrs := []Attribute{attribute.Key("customKey").String("customValue")}
+
+	WithCustomResourceAttributes(attrs...).apply(tp)
+
+	assert.Len(t, tp.resources.customAttrs, 1)
 }

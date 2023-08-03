@@ -15,6 +15,8 @@ type resourceConfig struct {
 	withHost      bool
 	withContainer bool
 	withProcess   bool
+
+	customAttrs []Attribute
 }
 
 func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfig) (*resource.Resource, error) {
@@ -30,6 +32,10 @@ func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfi
 
 	if cfg.version != "" {
 		attrs = append(attrs, semconv.ServiceVersion(cfg.version))
+	}
+
+	for _, attr := range cfg.customAttrs {
+		attrs = append(attrs, attr)
 	}
 
 	opts = append(opts, resource.WithAttributes(attrs...))
