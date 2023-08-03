@@ -34,9 +34,8 @@ func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfi
 		attrs = append(attrs, semconv.ServiceVersion(cfg.version))
 	}
 
-	for _, attr := range cfg.customAttrs {
-		attrs = append(attrs, attr)
-	}
+	// add custom attributes
+	attrs = append(attrs, cfg.customAttrs...)
 
 	opts = append(opts, resource.WithAttributes(attrs...))
 
