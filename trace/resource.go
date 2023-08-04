@@ -44,12 +44,12 @@ func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfi
 
 	if cfg.withProcess {
 		// adding all the resource.WithProcess() options, except WithProcessOwner() since it's failing in k8s environments
-		opts = append(opts, resource.WithProcessPID())
-		opts = append(opts, resource.WithProcessExecutableName())
-		opts = append(opts, resource.WithProcessCommandArgs())
-		opts = append(opts, resource.WithProcessRuntimeName())
-		opts = append(opts, resource.WithProcessRuntimeVersion())
-		opts = append(opts, resource.WithProcessRuntimeDescription())
+		opts = append(opts, resource.WithProcessPID(),
+			resource.WithProcessExecutableName(),
+			resource.WithProcessCommandArgs(),
+			resource.WithProcessRuntimeName(),
+			resource.WithProcessRuntimeVersion(),
+			resource.WithProcessRuntimeDescription())
 	}
 
 	return resource.New(ctx, opts...)
