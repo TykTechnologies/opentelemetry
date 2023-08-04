@@ -68,6 +68,17 @@ func TestResourceFactory(t *testing.T) {
 			},
 			expectedErr: nil,
 		},
+		{
+			name: "Test with custom attributes",
+			cfg: resourceConfig{
+				customAttrs: []Attribute{ // Attribute is a type alias for attribute.KeyValue
+					attribute.Key("customKey").String("customValue"),
+				},
+			},
+			expectedAttrs: []attribute.KeyValue{
+				attribute.Key("customKey").String("customValue"),
+			},
+		},
 	}
 
 	for _, tc := range testCases {

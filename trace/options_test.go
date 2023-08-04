@@ -92,3 +92,12 @@ func Test_WithProcessDetector(t *testing.T) {
 
 	assert.Equal(t, true, tp.resources.withProcess)
 }
+
+func Test_WithCustomResourceAttributes(t *testing.T) {
+	tp := &traceProvider{}
+	attrs := []Attribute{NewAttribute("key", "value")}
+
+	WithCustomResourceAttributes(attrs...).apply(tp)
+
+	assert.Len(t, tp.resources.customAttrs, 1)
+}
