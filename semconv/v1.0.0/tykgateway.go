@@ -15,13 +15,13 @@ const (
 	// represents the gateway ID
 	TykGWIDKey = attribute.Key(TykGWPrefix + "id")
 
-	// represents if the gateway is hybrid
-	TykGWHybridKey = attribute.Key(TykGWPrefix + "hybrid")
+	// represents if the gateway is in a dataplane (edge gateway)
+	TykGWDataplaneKey = attribute.Key(TykGWPrefix + "dataplane")
 
-	// represents the group id of the hybrid gateway
-	TykHybridGWGroupIDKey = attribute.Key(TykGWPrefix + "group.id")
+	// represents the group id of the dataplane gateway
+	TykDataplaneGWGroupIDKey = attribute.Key(TykGWPrefix + "group.id")
 
-	// represents the group id of the hybrid gateway
+	// represents the group id of the dataplane gateway
 	TykGWSegmentTagsKey = attribute.Key(TykGWPrefix + "tags")
 )
 
@@ -32,21 +32,21 @@ func TykGWID(id string) trace.Attribute {
 	return TykGWIDKey.String(id)
 }
 
-// TykGWHybrid returns an attribute KeyValue conforming to the
-// "tyk.gw.hybrid" semantic convention.  It represents if the Tyk Gateway
-// is hybrid (slave_options.use_rpc=true).
-func TykGWHybrid(isHybrid bool) trace.Attribute {
-	return TykGWHybridKey.Bool(isHybrid)
+// TykGWDataplane returns an attribute KeyValue conforming to the
+// "tyk.gw.dataplane" semantic convention.  It represents if the Tyk Gateway
+// is dataplane (slave_options.use_rpc=true).
+func TykGWDataplane(isDataplane bool) trace.Attribute {
+	return TykGWDataplaneKey.Bool(isDataplane)
 }
 
-// TykHybridGWGroupID returns an attribute KeyValue conforming to the
+// TykDataplaneGWGroupID returns an attribute KeyValue conforming to the
 // "tyk.gw.group.id" semantic convention.  It represents the db_app_conf_options.tags
-// of the Tyk Gateway. It only populated if the gateway is hybrid.
-func TykHybridGWGroupID(groupID string) trace.Attribute {
-	return TykHybridGWGroupIDKey.String(groupID)
+// of the Tyk Gateway. It only populated if the gateway is dataplane.
+func TykDataplaneGWGroupID(groupID string) trace.Attribute {
+	return TykDataplaneGWGroupIDKey.String(groupID)
 }
 
-// TykHybridGWGroupID returns an attribute KeyValue conforming to the
+// TykGWSegmentTags returns an attribute KeyValue conforming to the
 // "tyk.gw.tags" semantic convention.  It represents the slave_options.group_id
 // of the Tyk Gateway. It only populated if the gateway is segmented.
 func TykGWSegmentTags(tags ...string) trace.Attribute {
