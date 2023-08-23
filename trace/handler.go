@@ -7,16 +7,15 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type responseWriterWrapper struct {
+type responseWriterWithSize struct {
 	http.ResponseWriter
-	contentLength int
-	onWrite       func(int) // callback for when Write is called
+	size int
 }
 
-func (rw *responseWriterWrapper) Write(b []byte) (int, error) {
-	n, err := rw.ResponseWriter.Write(b)
-	rw.contentLength += n
-	rw.onWrite(rw.contentLength)
+func (rw *responseWriterWithSize) Write(p []byte) (int, error) {
+	n, err := rw.ResponseWriter.Write(p)
+	rw.size += n
+
 	return n, err
 }
 
@@ -25,25 +24,21 @@ func NewHTTPHandler(name string, handler http.Handler, tp Provider, attr ...Attr
 		otelhttp.WithSpanNameFormatter(httpSpanNameFormatter),
 	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		attr = append(attr, NewAttribute("http.request_content_length", r.ContentLength))
+	opts = append(opts, otelhttp.WithSpanOptions(
+		trace.WithAttributes(attr...),
+	))
 
-		opts = append(opts, otelhttp.WithSpanOptions(
-			trace.WithAttributes(attr...),
-		))
-
-		rwWrapper := &responseWriterWrapper{
+	return otelhttp.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		span := trace.SpanFromContext(r.Context())
+		// Wrap response writer to capture the response size
+		rw := &responseWriterWithSize{
 			ResponseWriter: w,
-			onWrite: func(length int) {
-				span := trace.SpanFromContext(r.Context())
-				if span != nil {
-					span.SetAttributes(NewAttribute("http.response_content_length", int64(length)))
-				}
-			},
 		}
 
-		otelhttp.NewHandler(handler, name, opts...).ServeHTTP(rwWrapper, r)
-	})
+		span.SetAttributes(NewAttribute("http.request.body.size", r.ContentLength))
+		handler.ServeHTTP(rw, r)
+		span.SetAttributes(NewAttribute("http.response.body.size", rw.size))
+	}), name, opts...)
 }
 
 var httpSpanNameFormatter = func(operation string, r *http.Request) string {
