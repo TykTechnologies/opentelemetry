@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// responseWriterWithSize is a struct that wraps an http.ResponseWriter and keeps track of the size of the response.
 type responseWriterWithSize struct {
 	http.ResponseWriter
 	size int
@@ -19,6 +20,11 @@ func (rw *responseWriterWithSize) Write(p []byte) (int, error) {
 	return n, err
 }
 
+// NewHTTPHandler wraps the provided http.Handler with one that starts a span
+// and injects the span context into the outbound request headers.
+// You need to initialize the TracerProvider first since it utilizes the underlying
+// TracerProvider and propagators.
+// It also utilizes a spanNameFormatter to format the span name r.Method + " " + r.URL.Path.
 func NewHTTPHandler(name string, handler http.Handler, tp Provider, attr ...Attribute) http.Handler {
 	opts := []otelhttp.Option{
 		otelhttp.WithSpanNameFormatter(httpSpanNameFormatter),
