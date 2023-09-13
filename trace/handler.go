@@ -10,6 +10,7 @@ import (
 // responseWriterWithSize is a struct that wraps an http.ResponseWriter and keeps track of the size of the response.
 type responseWriterWithSize struct {
 	http.ResponseWriter
+	http.Hijacker
 	size int
 }
 
@@ -39,6 +40,10 @@ func NewHTTPHandler(name string, handler http.Handler, tp Provider, attr ...Attr
 		// Wrap response writer to capture the response size
 		rw := &responseWriterWithSize{
 			ResponseWriter: w,
+		}
+		h, ok := w.(http.Hijacker)
+		if ok {
+			rw.Hijacker = h
 		}
 
 		span.SetAttributes(NewAttribute("http.request.body.size", r.ContentLength))
