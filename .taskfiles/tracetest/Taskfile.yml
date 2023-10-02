@@ -17,7 +17,6 @@ tasks:
     platforms: [darwin]
     cmds:
       - curl -L https://raw.githubusercontent.com/kubeshop/tracetest/main/install-cli.sh | bash -s -- v0.12.2
-
   install:linux:
     internal: true
     desc: "Install tracetest"
@@ -25,7 +24,4 @@ tasks:
       - type tracetest
     platforms: [linux]
     cmds:  # https://docs.tracetest.io/getting-started/cli-installation-reference#apt
-      - sudo apt-get update && sudo apt-get install -y apt-transport-https ca-certificates
-      - echo "deb [trusted=yes] https://apt.fury.io/tracetest/ /" | sudo tee /etc/apt/sources.list.d/fury.list
-      - sudo apt-get update
-      - sudo apt-get install tracetest=0.12.2
+      - curl -L https://raw.githubusercontent.com/kubeshop/tracetest/main/install-cli.sh | bash -s -- v0.12.2
