@@ -15,6 +15,8 @@ type resourceConfig struct {
 	withHost      bool
 	withContainer bool
 	withProcess   bool
+
+	customAttrs []Attribute
 }
 
 func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfig) (*resource.Resource, error) {
@@ -32,6 +34,9 @@ func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfi
 		attrs = append(attrs, semconv.ServiceVersion(cfg.version))
 	}
 
+	// add custom attributes
+	attrs = append(attrs, cfg.customAttrs...)
+
 	opts = append(opts, resource.WithAttributes(attrs...))
 
 	if cfg.withContainer {
@@ -43,7 +48,13 @@ func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfi
 	}
 
 	if cfg.withProcess {
-		opts = append(opts, resource.WithProcess())
+		// adding all the resource.WithProcess() options, except WithProcessOwner() since it's failing in k8s environments
+		opts = append(opts, resource.WithProcessPID(),
+			resource.WithProcessExecutableName(),
+			resource.WithProcessCommandArgs(),
+			resource.WithProcessRuntimeName(),
+			resource.WithProcessRuntimeVersion(),
+			resource.WithProcessRuntimeDescription())
 	}
 
 	return resource.New(ctx, opts...)

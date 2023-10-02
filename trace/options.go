@@ -172,3 +172,22 @@ func WithProcessDetector() Option {
 		},
 	}
 }
+
+/*
+	WithCustomResourceAttributes adds custom attributes to the configured resource.
+
+Example
+
+	attrs := []trace.Attribute{trace.NewAttribute("key", "value")}
+	provider, err := trace.NewProvider(trace.WithCustomResourceAttributes(attrs...))
+	if err != nil {
+		panic(err)
+	}
+*/
+func WithCustomResourceAttributes(attrs ...Attribute) Option {
+	return &opts{
+		fn: func(tp *traceProvider) {
+			tp.resources.customAttrs = attrs
+		},
+	}
+}

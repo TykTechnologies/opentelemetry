@@ -18,6 +18,11 @@ func SpanFromContext(ctx context.Context) Span {
 	return trace.SpanFromContext(ctx)
 }
 
+// ContextWithSpan returns a child context from ctx with span embedded
+func ContextWithSpan(ctx context.Context, span Span) context.Context {
+	return trace.ContextWithSpan(ctx, span)
+}
+
 // NewSpanFromContext creates a new span from the given context.
 // If the context already has a span attached to it, the new span will be a child of the existing span.
 // If the context does not have a span attached to it, the new span will be a root span.
