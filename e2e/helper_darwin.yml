@@ -1,7 +1,0 @@
-version: '3'
-
-tasks:
-  install-tracetest:
-    cmds:
-      - echo "Installing tracetest on macOS"
-      - brew install kubeshop/tracetest/tracetest
