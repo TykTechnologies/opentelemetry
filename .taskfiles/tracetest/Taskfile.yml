@@ -7,8 +7,6 @@ tasks:
       - install
     cmds:
       - tracetest configure -g --endpoint http://localhost:11633
-      - sleep 2;
-      - tracetest version
 
   install:
     internal: true
