@@ -22,8 +22,6 @@ tasks:
     cmds:
     - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml up -d --build
     - tracetest configure -g --endpoint http://localhost:11633
-    - sleep 2;
-    - tracetest version
 
   e2e-test:
     desc: Run e2e tests scenarios with tracetest
