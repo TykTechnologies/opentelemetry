@@ -1,7 +1,7 @@
 version: '3'
 
 includes:
-  helper: ./e2e/helper_{{OS}}.yml
+  tracetest: ./.taskfiles/tracetest/Taskfile.yml
 
 tasks:
   build:
@@ -15,17 +15,18 @@ tasks:
 
   e2e-setup:
     desc: Install e2e test - start e2e/basic app, tracetest and otel-collector
+    deps:
+      - tracetest
+    status:
+      - tracetest version
     cmds:
-    - task: helper:install-tracetest
     - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml up -d --build
     - tracetest configure -g --endpoint http://localhost:11633
-    - sleep 2;
-    - tracetest version
 
-  e2e-test: 
+  e2e-test:
     desc: Run e2e tests scenarios with tracetest
     cmds:
-     - tracetest run test -f ./e2e/basic/tests/example.yml --required-gates test-specs -o pretty
+     - tracetest test run -d ./e2e/basic/tests/example.yml -w -o pretty
 
   e2e-stop:
     desc: Stop e2e enviroment.
