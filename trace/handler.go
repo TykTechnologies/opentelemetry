@@ -22,11 +22,6 @@ func (rw *responseWriterWithSize) Write(p []byte) (int, error) {
 	return n, err
 }
 
-type OpenTelemetryOptions struct {
-	Provider   Provider
-	Attributes []Attribute
-}
-
 var (
 	httpHandler http.Handler
 	once        sync.Once
