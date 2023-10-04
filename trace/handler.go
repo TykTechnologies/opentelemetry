@@ -34,10 +34,8 @@ var (
 
 // NewHTTPHandler wraps the provided http.Handler with one that starts a span
 // and injects the span context into the outbound request headers.
-// You need to initialize the TracerProvider first since it utilizes the underlying
-// TracerProvider and propagators.
 // It also utilizes a spanNameFormatter to format the span name r.Method + " " + r.URL.Path.
-func NewHTTPHandler(name string, handler http.Handler, tp Provider, attr ...Attribute) http.Handler {
+func NewHTTPHandler(name string, handler http.Handler, attr ...Attribute) http.Handler {
 	once.Do(func() {
 		opts := []otelhttp.Option{
 			otelhttp.WithSpanNameFormatter(httpSpanNameFormatter),
