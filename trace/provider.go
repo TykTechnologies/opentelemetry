@@ -7,6 +7,7 @@ import (
 
 	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/otel"
+	noopMetricProvider "go.opentelemetry.io/otel/metric/noop"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -131,6 +132,8 @@ func NewProvider(opts ...Option) (Provider, error) {
 
 	// set global otel tracer provider
 	otel.SetTracerProvider(tracerProvider)
+
+	otel.SetMeterProvider(noopMetricProvider.NewMeterProvider())
 
 	// set the global otel context propagator
 	otel.SetTextMapPropagator(propagator)
