@@ -74,7 +74,7 @@ func main() {
 			log.Printf("error on encode response %s", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-	}), provider, baseTykAttributes...))
+	}), baseTykAttributes...))
 
 	srv := &http.Server{
 		Addr:    ":8080",
