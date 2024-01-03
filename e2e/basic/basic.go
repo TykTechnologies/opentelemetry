@@ -29,6 +29,7 @@ func main() {
 		TLS: config.TLS{
 			Enable: false,
 		},
+		SpanProcessorType: "mpsc",
 	}
 
 	log.Println("Initializing OpenTelemetry at e2e-basic:", cfg.Endpoint)

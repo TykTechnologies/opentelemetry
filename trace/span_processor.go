@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/TykTechnologies/opentelemetry/config"
@@ -11,6 +12,9 @@ func spanProcessorFactory(spanProcessorType string, exporter sdktrace.SpanExport
 	switch spanProcessorType {
 	case "simple":
 		return newSimpleSpanProcessor(exporter)
+	case "mpsc":
+		fmt.Println("Using MPSC Span Processor")
+		return NewMPSCSpanProcessor(exporter, cfg.BatchSize)
 	default:
 		// Default to BatchSpanProcessor
 		return newBatchSpanProcessor(exporter, cfg)
