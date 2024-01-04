@@ -22,11 +22,18 @@ func newSimpleSpanProcessor(exporter sdktrace.SpanExporter) sdktrace.SpanProcess
 }
 
 func newBatchSpanProcessor(exporter sdktrace.SpanExporter, cfg *config.OpenTelemetry) sdktrace.SpanProcessor {
-	opts := []sdktrace.BatchSpanProcessorOption{
-		sdktrace.WithMaxExportBatchSize(cfg.BatchSize),
-		sdktrace.WithMaxQueueSize(cfg.BatchQueueSize),
-		sdktrace.WithBatchTimeout(time.Duration(cfg.BatchTimeout) * time.Millisecond),
-		sdktrace.WithExportTimeout(time.Duration(cfg.BatchExportTimeout) * time.Millisecond),
+	opts := []sdktrace.BatchSpanProcessorOption{}
+	if cfg.BatchSize > 0 {
+		opts = append(opts, sdktrace.WithMaxExportBatchSize(cfg.BatchSize))
+	}
+	if cfg.BatchQueueSize > 0 {
+		opts = append(opts, sdktrace.WithMaxQueueSize(cfg.BatchQueueSize))
+	}
+	if cfg.BatchTimeout > 0 {
+		opts = append(opts, sdktrace.WithBatchTimeout(time.Duration(cfg.BatchTimeout)*time.Millisecond))
+	}
+	if cfg.BatchExportTimeout > 0 {
+		opts = append(opts, sdktrace.WithExportTimeout(time.Duration(cfg.BatchExportTimeout)*time.Millisecond))
 	}
 
 	return sdktrace.NewBatchSpanProcessor(exporter, opts...)
