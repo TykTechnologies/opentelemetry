@@ -99,7 +99,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 	}
 
 	// create the span processor - this is what will send the spans to the exporter.
-	spanProcesor := spanProcessorFactory(provider.cfg.SpanProcessorType, exporter)
+	spanProcesor := spanProcessorFactory(provider.cfg.SpanProcessorType, exporter, provider.cfg)
 
 	// create the sampler based on the configs
 	samplerType := provider.cfg.Sampling.Type
