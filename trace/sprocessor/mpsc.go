@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
 	"unsafe"
 
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -22,7 +21,7 @@ type Node struct {
 type MPSCQueue struct {
 	head   unsafe.Pointer // *Node
 	tail   unsafe.Pointer // *Node
-	length int32          // tamaño actual de la cola
+	length int32          // actual queue length
 }
 
 // NewMPSCQueue creates a new MPSCQueue
@@ -103,14 +102,18 @@ type MPSCSpanProcessor struct {
 var _ sdktrace.SpanProcessor = (*MPSCSpanProcessor)(nil)
 
 func NewMPSCSpanProcessor(exporter sdktrace.SpanExporter, maxSize, waitTime int) *MPSCSpanProcessor {
-	return &MPSCSpanProcessor{
-		queue:        &MPSCQueue{}, // Inicializa tu MPSCQueue aquí
+	queue := &MPSCSpanProcessor{
+		queue:        NewMPSCQueue(),
 		buffer:       make([]trace.ReadOnlySpan, 0, maxSize),
 		spansNeeded:  int32(maxSize),
 		exportSignal: make(chan struct{}, 1),
 		waitTime:     waitTime,
 		exporter:     exporter,
 	}
+
+	go queue.ExporterThread(context.Background())
+
+	return queue
 }
 
 func (bsp *MPSCSpanProcessor) OnEnd(s trace.ReadOnlySpan) {
@@ -130,14 +133,12 @@ func (bsp *MPSCSpanProcessor) ExporterThread(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-bsp.exportSignal:
-			bsp.exportBatch()
-		case <-time.After(time.Second): // Reemplaza con tu WAIT_TIME
-			bsp.exportBatch()
+			bsp.exportBatch(false)
 		}
 	}
 }
 
-func (bsp *MPSCSpanProcessor) exportBatch() {
+func (bsp *MPSCSpanProcessor) exportBatch(force bool) {
 	bsp.mu.Lock()
 	defer bsp.mu.Unlock()
 
@@ -147,9 +148,9 @@ func (bsp *MPSCSpanProcessor) exportBatch() {
 		}
 	}
 
-	if len(bsp.buffer) >= int(bsp.spansNeeded) {
+	if (len(bsp.buffer) >= int(bsp.spansNeeded)) || force {
 		bsp.export(bsp.buffer)
-		bsp.buffer = bsp.buffer[:0] // Vaciar el buffer
+		bsp.buffer = bsp.buffer[:0] // emptying buffer
 	}
 
 	if bsp.queue.IsEmpty() {
@@ -165,6 +166,7 @@ func (bsp *MPSCSpanProcessor) export(spans []trace.ReadOnlySpan) {
 }
 
 func (bsp *MPSCSpanProcessor) Shutdown(ctx context.Context) error {
+	bsp.ForceFlush(ctx)
 	return bsp.exporter.Shutdown(ctx)
 }
 
@@ -174,6 +176,7 @@ func (bsp *MPSCSpanProcessor) ForceFlush(ctx context.Context) error {
 	if len(batch) > 0 {
 		return bsp.exporter.ExportSpans(ctx, batch)
 	}
+
 	return nil
 }
 
