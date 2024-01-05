@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -59,6 +60,7 @@ func (q *MPSCQueue) Dequeue() (sdktrace.ReadOnlySpan, bool) {
 		head = atomic.LoadPointer(&q.head)
 		tail = atomic.LoadPointer(&q.tail)
 		next = atomic.LoadPointer(&((*Node)(head)).next)
+		atomic.AddInt32(&q.length, -1)
 
 		if head == atomic.LoadPointer(&q.head) {
 			if head == tail {
@@ -94,6 +96,7 @@ type MPSCSpanProcessor struct {
 	exportSignal chan struct{}
 	mu           sync.Mutex
 
+	timer    *time.Timer
 	exporter sdktrace.SpanExporter
 }
 
@@ -105,6 +108,7 @@ func NewMPSCSpanProcessor(exporter sdktrace.SpanExporter, maxSize, waitTime int)
 		spansNeeded:  int32(maxSize),
 		exportSignal: make(chan struct{}, 2048),
 		waitTime:     waitTime,
+		timer:        time.NewTimer(time.Duration(waitTime) * time.Millisecond),
 		exporter:     exporter,
 	}
 
@@ -129,28 +133,24 @@ func (bsp *MPSCSpanProcessor) ExporterThread(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
+		case <-bsp.timer.C:
+			bsp.exportBatch()
 		case <-bsp.exportSignal:
-			bsp.exportBatch(false)
+			bsp.exportBatch()
 		}
 	}
 }
 
-func (bsp *MPSCSpanProcessor) exportBatch(force bool) {
+func (bsp *MPSCSpanProcessor) exportBatch() {
 	buffer := make([]trace.ReadOnlySpan, 0, bsp.spansNeeded)
-	for !bsp.queue.IsEmpty() && len(buffer) < int(bsp.spansNeeded) {
+	for !bsp.queue.IsEmpty() || len(buffer) == int(bsp.spansNeeded) {
 		if span, ok := bsp.queue.Dequeue(); ok {
 			buffer = append(buffer, span)
 		}
 	}
 
-	if (len(buffer) >= int(bsp.spansNeeded)) || force {
-		bsp.export(buffer)
-		buffer = buffer[:0] // emptying buffer
-	}
-
-	if bsp.queue.IsEmpty() {
-		atomic.StoreInt32(&bsp.spansNeeded, int32(bsp.waitTime-len(buffer)))
-	}
+	bsp.export(buffer)
+	buffer = buffer[:0] // emptying buffer
 }
 
 func (bsp *MPSCSpanProcessor) export(spans []trace.ReadOnlySpan) {
