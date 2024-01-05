@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -15,6 +17,31 @@ import (
 	"github.com/TykTechnologies/opentelemetry/trace"
 	"github.com/sirupsen/logrus"
 )
+
+// processEnvs is a helper function to process environment variables - usefull for development.
+// e.g ENDPOINT="localhost:4317" PROCESSOR="mpsc" BATCH_SIZE=1 go run basic.go
+func processEnvs(cfg *config.OpenTelemetry) {
+	if processor := os.Getenv("PROCESSOR"); processor != "" {
+		cfg.SpanProcessorType = processor
+		fmt.Println("using custom processor:", processor)
+	}
+
+	if batchSize := os.Getenv("BATCH_SIZE"); batchSize != "" {
+		cfg.BatchSize, _ = strconv.Atoi(batchSize)
+
+		fmt.Println("using custom batch size:", batchSize)
+	}
+
+	if batchTimeout := os.Getenv("BATCH_TIMEOUT"); batchTimeout != "" {
+		cfg.BatchTimeout, _ = strconv.Atoi(batchTimeout)
+		fmt.Println("using custom batch timeout:", batchTimeout)
+	}
+
+	if endpoint := os.Getenv("ENDPOINT"); endpoint != "" {
+		cfg.Endpoint = endpoint
+		fmt.Println("using custom endpoint:", endpoint)
+	}
+}
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
@@ -30,6 +57,8 @@ func main() {
 			Enable: false,
 		},
 	}
+
+	processEnvs(&cfg)
 
 	log.Println("Initializing OpenTelemetry at e2e-basic:", cfg.Endpoint)
 
