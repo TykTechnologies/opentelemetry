@@ -54,7 +54,6 @@ func (q *MPSCQueue) Enqueue(value sdktrace.ReadOnlySpan) {
 // Dequeue removes and returns an element from the queue
 func (q *MPSCQueue) Dequeue() (sdktrace.ReadOnlySpan, bool) {
 	var head, tail, next unsafe.Pointer
-	atomic.AddInt32(&q.length, -1)
 
 	for {
 		head = atomic.LoadPointer(&q.head)
@@ -90,7 +89,6 @@ func (q *MPSCQueue) IsEmpty() bool {
 
 type MPSCSpanProcessor struct {
 	queue        *MPSCQueue
-	buffer       []trace.ReadOnlySpan
 	spansNeeded  int32
 	waitTime     int
 	exportSignal chan struct{}
@@ -104,9 +102,8 @@ var _ sdktrace.SpanProcessor = (*MPSCSpanProcessor)(nil)
 func NewMPSCSpanProcessor(exporter sdktrace.SpanExporter, maxSize, waitTime int) *MPSCSpanProcessor {
 	queue := &MPSCSpanProcessor{
 		queue:        NewMPSCQueue(),
-		buffer:       make([]trace.ReadOnlySpan, 0, maxSize),
 		spansNeeded:  int32(maxSize),
-		exportSignal: make(chan struct{}, 1),
+		exportSignal: make(chan struct{}, 2048),
 		waitTime:     waitTime,
 		exporter:     exporter,
 	}
@@ -139,27 +136,25 @@ func (bsp *MPSCSpanProcessor) ExporterThread(ctx context.Context) {
 }
 
 func (bsp *MPSCSpanProcessor) exportBatch(force bool) {
-	bsp.mu.Lock()
-	defer bsp.mu.Unlock()
-
-	for !bsp.queue.IsEmpty() && len(bsp.buffer) < int(bsp.spansNeeded) {
+	buffer := make([]trace.ReadOnlySpan, 0, bsp.spansNeeded)
+	for !bsp.queue.IsEmpty() && len(buffer) < int(bsp.spansNeeded) {
 		if span, ok := bsp.queue.Dequeue(); ok {
-			bsp.buffer = append(bsp.buffer, span)
+			buffer = append(buffer, span)
 		}
 	}
 
-	if (len(bsp.buffer) >= int(bsp.spansNeeded)) || force {
-		bsp.export(bsp.buffer)
-		bsp.buffer = bsp.buffer[:0] // emptying buffer
+	if (len(buffer) >= int(bsp.spansNeeded)) || force {
+		bsp.export(buffer)
+		buffer = buffer[:0] // emptying buffer
 	}
 
 	if bsp.queue.IsEmpty() {
-		atomic.StoreInt32(&bsp.spansNeeded, int32(bsp.waitTime-len(bsp.buffer)))
+		atomic.StoreInt32(&bsp.spansNeeded, int32(bsp.waitTime-len(buffer)))
 	}
 }
 
 func (bsp *MPSCSpanProcessor) export(spans []trace.ReadOnlySpan) {
-	err := bsp.exporter.ExportSpans(context.Background(), bsp.buffer)
+	err := bsp.exporter.ExportSpans(context.Background(), spans)
 	if err != nil {
 		fmt.Println("err exporting spans:", err)
 	}
@@ -172,9 +167,15 @@ func (bsp *MPSCSpanProcessor) Shutdown(ctx context.Context) error {
 
 // ForceFlush exports all ended spans that have not yet been exported.
 func (bsp *MPSCSpanProcessor) ForceFlush(ctx context.Context) error {
-	batch := bsp.buffer
-	if len(batch) > 0 {
-		return bsp.exporter.ExportSpans(ctx, batch)
+	if !bsp.queue.IsEmpty() {
+		buffer := make([]trace.ReadOnlySpan, 0, bsp.spansNeeded)
+		for !bsp.queue.IsEmpty() && len(buffer) < int(bsp.spansNeeded) {
+			if span, ok := bsp.queue.Dequeue(); ok {
+				buffer = append(buffer, span)
+			}
+		}
+
+		return bsp.exporter.ExportSpans(ctx, buffer)
 	}
 
 	return nil
