@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/TykTechnologies/opentelemetry/config"
+	"github.com/TykTechnologies/opentelemetry/trace/sprocessor"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -11,6 +12,10 @@ func spanProcessorFactory(spanProcessorType string, exporter sdktrace.SpanExport
 	switch spanProcessorType {
 	case "simple":
 		return newSimpleSpanProcessor(exporter)
+	case "tyk":
+		return sprocessor.NewAnalyticsHandler(exporter, cfg)
+	case "mpsc":
+		return sprocessor.NewMPSCSpanProcessor(exporter, cfg.BatchSize, cfg.BatchTimeout)
 	default:
 		// Default to BatchSpanProcessor
 		return newBatchSpanProcessor(exporter, cfg)
