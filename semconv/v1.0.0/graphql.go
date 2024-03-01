@@ -6,8 +6,10 @@ import (
 )
 
 const (
+	// GraphQLPrefix is the base prefix for all GraphQL attributes
+	GraphQLPrefix = "graphql."
 	// GraphQLOperationPrefix is the base prefix for all the GraphQL operation attributes
-	GraphQLOperationPrefix = "operation."
+	GraphQLOperationPrefix = GraphQLPrefix + "operation."
 )
 
 const (
@@ -20,7 +22,7 @@ const (
 
 const (
 	// GraphQLDocumentKey represents The GraphQL document being executed.
-	GraphQLDocumentKey = attribute.Key("document")
+	GraphQLDocumentKey = attribute.Key(GraphQLPrefix + "document")
 )
 
 // GraphQLOperationName returns an attribute KeyValue conforming to the
