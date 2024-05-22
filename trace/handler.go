@@ -2,6 +2,7 @@ package trace
 
 import (
 	"net/http"
+	"sync"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/trace"
@@ -21,35 +22,44 @@ func (rw *responseWriterWithSize) Write(p []byte) (int, error) {
 	return n, err
 }
 
+var (
+	httpHandler http.Handler
+	once        sync.Once
+)
+
 // NewHTTPHandler wraps the provided http.Handler with one that starts a span
 // and injects the span context into the outbound request headers.
 // You need to initialize the TracerProvider first since it utilizes the underlying
 // TracerProvider and propagators.
 // It also utilizes a spanNameFormatter to format the span name r.Method + " " + r.URL.Path.
-func NewHTTPHandler(name string, handler http.Handler, tp Provider, attr ...Attribute) http.Handler {
-	opts := []otelhttp.Option{
-		otelhttp.WithSpanNameFormatter(httpSpanNameFormatter),
-	}
-
-	opts = append(opts, otelhttp.WithSpanOptions(
-		trace.WithAttributes(attr...),
-	))
-
-	return otelhttp.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		span := trace.SpanFromContext(r.Context())
-		// Wrap response writer to capture the response size
-		rw := &responseWriterWithSize{
-			ResponseWriter: w,
-		}
-		h, ok := w.(http.Hijacker)
-		if ok {
-			rw.Hijacker = h
+func NewHTTPHandler(name string, handler http.Handler, attr ...Attribute) http.Handler {
+	once.Do(func() {
+		opts := []otelhttp.Option{
+			otelhttp.WithSpanNameFormatter(httpSpanNameFormatter),
 		}
 
-		span.SetAttributes(NewAttribute("http.request.body.size", r.ContentLength))
-		handler.ServeHTTP(rw, r)
-		span.SetAttributes(NewAttribute("http.response.body.size", rw.size))
-	}), name, opts...)
+		opts = append(opts, otelhttp.WithSpanOptions(
+			trace.WithAttributes(attr...),
+		))
+
+		httpHandler = otelhttp.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			span := trace.SpanFromContext(r.Context())
+
+			// Wrap response writer to capture the response size
+			rw := &responseWriterWithSize{
+				ResponseWriter: w,
+			}
+			if h, ok := w.(http.Hijacker); ok {
+				rw.Hijacker = h
+			}
+
+			span.SetAttributes(NewAttribute("http.request.body.size", r.ContentLength))
+			handler.ServeHTTP(rw, r)
+			span.SetAttributes(NewAttribute("http.response.body.size", rw.size))
+		}), name, opts...)
+	})
+
+	return httpHandler
 }
 
 var httpSpanNameFormatter = func(operation string, r *http.Request) string {

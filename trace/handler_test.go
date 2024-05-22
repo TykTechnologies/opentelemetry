@@ -129,7 +129,7 @@ func Test_NewHTTPHandler(t *testing.T) {
 		if _, err := w.Write(content); err != nil {
 			t.Fatal(err)
 		}
-	}), provider)
+	}))
 
 	// create a new server
 	ts := httptest.NewServer(handler)
