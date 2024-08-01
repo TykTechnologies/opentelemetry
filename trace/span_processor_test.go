@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/stretchr/testify/assert"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -76,7 +77,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 		te := testExporter{}
 
 		// Create a new span processor
-		processor := newBatchSpanProcessor(&te)
+		processor := newBatchSpanProcessor(&te, &config.OpenTelemetry{})
 		assert.NotNil(t, processor)
 		// Create a new tracer provider
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
@@ -104,7 +105,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 		te := testExporter{}
 
 		// Create a new span processor
-		processor := newBatchSpanProcessor(&te)
+		processor := newBatchSpanProcessor(&te, &config.OpenTelemetry{})
 		assert.NotNil(t, processor)
 		// Create a new tracer provider
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
@@ -142,7 +143,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 		te := testExporter{}
 
 		// Create a new span processor
-		processor := newBatchSpanProcessor(&te)
+		processor := newBatchSpanProcessor(&te, &config.OpenTelemetry{})
 		assert.NotNil(t, processor)
 		// Create a new tracer provider
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
