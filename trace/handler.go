@@ -21,6 +21,10 @@ func (rw *responseWriterWithSize) Write(p []byte) (int, error) {
 	return n, err
 }
 
+func (rw *responseWriterWithSize) Flush() {
+	rw.ResponseWriter.(http.Flusher).Flush()
+}
+
 // NewHTTPHandler wraps the provided http.Handler with one that starts a span
 // and injects the span context into the outbound request headers.
 // You need to initialize the TracerProvider first since it utilizes the underlying
