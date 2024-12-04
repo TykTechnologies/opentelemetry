@@ -7,6 +7,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+var (
+	// assert that http.Flusher is implemented by responseWriterWithSize since it is to be used in Tyk gateway.
+	_ http.Flusher = &responseWriterWithSize{}
+)
+
 // responseWriterWithSize is a struct that wraps an http.ResponseWriter and keeps track of the size of the response.
 type responseWriterWithSize struct {
 	http.ResponseWriter
