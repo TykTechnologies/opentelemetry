@@ -21,7 +21,7 @@ jobs:
       - name: Setup Golang
         uses: actions/setup-go@v4
         with:
-          go-version: 1.19  
+          go-version: 1.22.6
       - name: Setup e2e
         run: task e2e-setup
       - name: Run e2e tests

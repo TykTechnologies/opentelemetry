@@ -1,4 +1,4 @@
-FROM golang:1.19 AS build
+FROM golang:1.22.6 AS build
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ WORKDIR /app/e2e/basic
 RUN go mod download
 RUN go build -o /basic
 
-FROM golang:1.19
+FROM golang:1.22.6
 
 WORKDIR /app
 
