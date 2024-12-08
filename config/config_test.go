@@ -35,6 +35,10 @@ func Test_SetDefault(t *testing.T) {
 					Type: TRACEIDRATIOBASED,
 					Rate: 0.8,
 				},
+				BatchSize:          1,
+				BatchTimeout:       1,
+				BatchQueueSize:     2,
+				BatchExportTimeout: 2,
 			},
 			expectedCfg: OpenTelemetry{
 				Enabled:            true,
@@ -48,6 +52,10 @@ func Test_SetDefault(t *testing.T) {
 					Type: TRACEIDRATIOBASED,
 					Rate: 0.8,
 				},
+				BatchSize:          1,
+				BatchTimeout:       1,
+				BatchQueueSize:     2,
+				BatchExportTimeout: 2,
 			},
 		},
 		{
@@ -66,6 +74,10 @@ func Test_SetDefault(t *testing.T) {
 				Sampling: Sampling{
 					Type: ALWAYSON,
 				},
+				BatchSize:          512,
+				BatchTimeout:       5000,
+				BatchQueueSize:     2048,
+				BatchExportTimeout: 30000,
 			},
 		},
 		{
@@ -88,6 +100,10 @@ func Test_SetDefault(t *testing.T) {
 					Type: TRACEIDRATIOBASED,
 					Rate: 0.5,
 				},
+				BatchSize:          512,
+				BatchTimeout:       5000,
+				BatchQueueSize:     2048,
+				BatchExportTimeout: 30000,
 			},
 		},
 	}
