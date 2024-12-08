@@ -32,6 +32,12 @@ type OpenTelemetry struct {
 	TLS TLS `json:"tls"`
 	// Defines the configurations to use in the sampler.
 	Sampling Sampling `json:"sampling"`
+
+	// BatchSpanProcessor configuration
+	BatchSize          int `json:"batch_size"`
+	BatchTimeout       int `json:"batch_timeout"`
+	BatchQueueSize     int `json:"batch_queue_size"`
+	BatchExportTimeout int `json:"batch_export_timeout"`
 }
 
 type TLS struct {
@@ -127,5 +133,21 @@ func (c *OpenTelemetry) SetDefaults() {
 
 	if c.Sampling.Type == TRACEIDRATIOBASED && c.Sampling.Rate == 0 {
 		c.Sampling.Rate = 0.5
+	}
+
+	if c.BatchSize == 0 {
+		c.BatchSize = 512
+	}
+
+	if c.BatchTimeout == 0 {
+		c.BatchTimeout = 5000
+	}
+
+	if c.BatchQueueSize == 0 {
+		c.BatchQueueSize = 2048
+	}
+
+	if c.BatchExportTimeout == 0 {
+		c.BatchExportTimeout = 30000
 	}
 }
