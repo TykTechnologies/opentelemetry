@@ -20,7 +20,7 @@ tasks:
     status:
       - tracetest version
     cmds:
-    - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml up -d --build
+    - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml -f e2e/custom-headers/docker-compose.yml up -d --build
     - tracetest configure -g --endpoint http://localhost:11633
     - sleep 2;
     - tracetest version
@@ -29,11 +29,13 @@ tasks:
     desc: Run all e2e tests scenarios with tracetest
     cmds:
      - tracetest test run -d ./e2e/basic/tests/example.yml -w -o pretty
+     - tracetest test run -d ./e2e/custom-headers/tests/custom-mode.yml -w -o pretty
+     - tracetest test run -d ./e2e/custom-headers/tests/upstream-propagation.yml -w -o pretty
 
   e2e-stop:
     desc: Stop e2e environment
     cmds:
-      - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml down --remove-orphans
+      - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml -f e2e/custom-headers/docker-compose.yml down --remove-orphans
 
   e2e:
     desc: Install, run and clean e2e tests
@@ -41,17 +43,3 @@ tasks:
       - task: e2e-setup
       - task: e2e-test
       - task: e2e-stop
-      - task: e2e-custom-headers
-
-  e2e-custom-headers:
-    desc: Run custom-headers e2e tests (standalone, no tracetest)
-    cmds:
-    - cd e2e/custom-headers && docker-compose up -d --build
-    - sleep 2
-    - |
-      echo "Testing custom mode..."
-      curl -s -H "X-Correlation-ID: abc12300000000000000000000000000-abc1230000000000-01" http://localhost:8080/test | jq .
-    - |
-      echo "Testing upstream propagation..."
-      curl -s -H "X-Correlation-ID: def45600000000000000000000000000-def4560000000000-01" http://localhost:8080/upstream | jq .
-    - cd e2e/custom-headers && docker-compose down
