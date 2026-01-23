@@ -1,0 +1,14 @@
+version: '3'
+services:
+  custom-headers:
+    build:
+      context: ../../
+      dockerfile: ./e2e/custom-headers/Dockerfile
+    ports:
+      - 8080:8080
+    environment:
+      - OTEL_CONTEXT_PROPAGATION=custom
+      - OTEL_CUSTOM_TRACE_HEADER=X-Correlation-ID
+networks:
+    default:
+      name: _default
