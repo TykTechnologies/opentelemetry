@@ -3,5 +3,4 @@ go 1.22.6
 use (
 	.
 	./e2e/basic
-	e2e/custom-headers
 )

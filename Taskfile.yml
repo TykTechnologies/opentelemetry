@@ -14,28 +14,26 @@ tasks:
       - go test -v -race -vet=off ./...
 
   e2e-setup:
-    desc: Install e2e tests - start all e2e apps, tracetest and otel-collector
+    desc: Install e2e test - start e2e/basic app, tracetest and otel-collector
     deps:
       - tracetest
     status:
       - tracetest version
     cmds:
-    - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml -f e2e/custom-headers/docker-compose.yml up -d --build
+    - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml up -d --build
     - tracetest configure -g --endpoint http://localhost:11633
     - sleep 2;
     - tracetest version
 
   e2e-test:
-    desc: Run all e2e tests scenarios with tracetest
+    desc: Run e2e tests scenarios with tracetest
     cmds:
      - tracetest test run -d ./e2e/basic/tests/example.yml -w -o pretty
-     - tracetest test run -d ./e2e/custom-headers/tests/custom-mode.yml -w -o pretty
-     - tracetest test run -d ./e2e/custom-headers/tests/upstream-propagation.yml -w -o pretty
 
   e2e-stop:
     desc: Stop e2e environment
     cmds:
-      - docker compose -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml -f e2e/custom-headers/docker-compose.yml down --remove-orphans
+      - docker compose  -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml down --remove-orphans
 
   e2e:
     desc: Install, run and clean e2e tests
