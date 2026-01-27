@@ -153,6 +153,17 @@ func (p *CustomHeaderPropagator) parseTraceContext(value string) trace.SpanConte
 // normaliseTraceID normalises a trace ID to 32 hex characters.
 // Handles UUIDs by removing dashes and padding/truncating as needed.
 func (p *CustomHeaderPropagator) normaliseTraceID(id string) string {
+	return p.normaliseHexID(id, 32)
+}
+
+// normaliseSpanID normalises a span ID to 16 hex characters.
+func (p *CustomHeaderPropagator) normaliseSpanID(id string) string {
+	return p.normaliseHexID(id, 16)
+}
+
+// normaliseHexID normalises an ID to the specified length of hex characters.
+// Handles UUIDs by removing dashes and padding/truncating as needed.
+func (p *CustomHeaderPropagator) normaliseHexID(id string, targetLen int) string {
 	// Remove dashes (for UUID format)
 	id = strings.ReplaceAll(id, "-", "")
 
@@ -166,40 +177,11 @@ func (p *CustomHeaderPropagator) normaliseTraceID(id string) string {
 
 	id = strings.ToLower(id)
 
-	// Pad or truncate to 32 characters
-	if len(id) < 32 {
-		id = id + strings.Repeat("0", 32-len(id))
-	} else if len(id) > 32 {
-		id = id[:32]
-	}
-
-	// Validate it's valid hex
-	if _, err := hex.DecodeString(id); err != nil {
-		return ""
-	}
-
-	return id
-}
-
-// normaliseSpanID normalises a span ID to 16 hex characters.
-func (p *CustomHeaderPropagator) normaliseSpanID(id string) string {
-	id = strings.ReplaceAll(id, "-", "")
-
-	// Remove any non-hex characters
-	id = strings.Map(func(r rune) rune {
-		if (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F') {
-			return r
-		}
-		return -1
-	}, id)
-
-	id = strings.ToLower(id)
-
-	// Pad or truncate to 16 characters
-	if len(id) < 16 {
-		id = id + strings.Repeat("0", 16-len(id))
-	} else if len(id) > 16 {
-		id = id[:16]
+	// Pad or truncate to target length
+	if len(id) < targetLen {
+		id = id + strings.Repeat("0", targetLen-len(id))
+	} else if len(id) > targetLen {
+		id = id[:targetLen]
 	}
 
 	// Validate it's valid hex
