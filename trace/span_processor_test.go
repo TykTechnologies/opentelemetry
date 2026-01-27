@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/stretchr/testify/assert"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -76,7 +77,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 		te := testExporter{}
 
 		// Create a new span processor
-		processor := newBatchSpanProcessor(&te)
+		processor := newBatchSpanProcessor(config.SpanBatchConfig{}, &te)
 		assert.NotNil(t, processor)
 		// Create a new tracer provider
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
@@ -104,7 +105,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 		te := testExporter{}
 
 		// Create a new span processor
-		processor := newBatchSpanProcessor(&te)
+		processor := newBatchSpanProcessor(config.SpanBatchConfig{}, &te)
 		assert.NotNil(t, processor)
 		// Create a new tracer provider
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
@@ -142,7 +143,7 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 		te := testExporter{}
 
 		// Create a new span processor
-		processor := newBatchSpanProcessor(&te)
+		processor := newBatchSpanProcessor(config.SpanBatchConfig{}, &te)
 		assert.NotNil(t, processor)
 		// Create a new tracer provider
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
@@ -175,6 +176,148 @@ func Test_NewBatchSpanProcessor(t *testing.T) {
 			assert.Equal(t, traceIDs[i/5], gotTraceID) // 5 spans per trace, that's why we divide by 5
 		}
 	})
+
+	t.Run("with custom batch config", func(t *testing.T) {
+		// Create a new exporter
+		te := testExporter{}
+
+		// Create a new span processor with custom config
+		cfg := config.SpanBatchConfig{
+			MaxQueueSize:       8192,
+			MaxExportBatchSize: 1024,
+			BatchTimeout:       3,
+		}
+		processor := newBatchSpanProcessor(cfg, &te)
+		assert.NotNil(t, processor)
+
+		// Create a new tracer provider
+		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
+
+		// create span and trace ids
+		wantTraceID, err := trace.TraceIDFromHex("01020304050607080102040810203040")
+		assert.Nil(t, err)
+
+		spanID, err := trace.SpanIDFromHex("0102040810203040")
+		assert.Nil(t, err)
+
+		// Register the span processor with the tracer provider
+		tp.RegisterSpanProcessor(processor)
+
+		spans := startTestSpan(t, tp, spanID, wantTraceID, 1)
+		span := spans[0]
+		span.End()
+		tp.ForceFlush(context.Background()) // forcing flush to avoid waiting for the batch timeout
+		assert.Equal(t, 1, len(te.spans))
+		gotTraceID := te.spans[0].SpanContext().TraceID()
+		assert.Equal(t, wantTraceID, gotTraceID)
+	})
+
+	t.Run("with partial batch config", func(t *testing.T) {
+		// Create a new exporter
+		te := testExporter{}
+
+		// Create a new span processor with only MaxQueueSize set
+		cfg := config.SpanBatchConfig{
+			MaxQueueSize: 4096,
+		}
+		processor := newBatchSpanProcessor(cfg, &te)
+		assert.NotNil(t, processor)
+
+		// Create a new tracer provider
+		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
+
+		// create span and trace ids
+		wantTraceID, err := trace.TraceIDFromHex("01020304050607080102040810203040")
+		assert.Nil(t, err)
+
+		spanID, err := trace.SpanIDFromHex("0102040810203040")
+		assert.Nil(t, err)
+
+		// Register the span processor with the tracer provider
+		tp.RegisterSpanProcessor(processor)
+
+		spans := startTestSpan(t, tp, spanID, wantTraceID, 1)
+		span := spans[0]
+		span.End()
+		tp.ForceFlush(context.Background())
+		assert.Equal(t, 1, len(te.spans))
+		gotTraceID := te.spans[0].SpanContext().TraceID()
+		assert.Equal(t, wantTraceID, gotTraceID)
+	})
+
+	t.Run("with zero values", func(t *testing.T) {
+		// Create a new exporter
+		te := testExporter{}
+
+		// Create a new span processor with zero values (should use SDK defaults)
+		cfg := config.SpanBatchConfig{
+			MaxQueueSize:       0,
+			MaxExportBatchSize: 0,
+		}
+		processor := newBatchSpanProcessor(cfg, &te)
+		assert.NotNil(t, processor)
+
+		// Create a new tracer provider
+		tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
+
+		// create span and trace ids
+		wantTraceID, err := trace.TraceIDFromHex("01020304050607080102040810203040")
+		assert.Nil(t, err)
+
+		spanID, err := trace.SpanIDFromHex("0102040810203040")
+		assert.Nil(t, err)
+
+		// Register the span processor with the tracer provider
+		tp.RegisterSpanProcessor(processor)
+
+		spans := startTestSpan(t, tp, spanID, wantTraceID, 1)
+		span := spans[0]
+		span.End()
+		tp.ForceFlush(context.Background())
+		assert.Equal(t, 1, len(te.spans))
+		gotTraceID := te.spans[0].SpanContext().TraceID()
+		assert.Equal(t, wantTraceID, gotTraceID)
+	})
+}
+
+func TestSpanProcessorFactory_SimpleIgnoresBatchConfig(t *testing.T) {
+	t.Parallel()
+
+	// Create a new exporter
+	te := testExporter{}
+
+	// Create batch config that should be ignored
+	cfg := config.SpanBatchConfig{
+		MaxQueueSize:       8192,
+		MaxExportBatchSize: 1024,
+		BatchTimeout:       3,
+	}
+
+	// Create a simple processor - batch config should be ignored
+	processor := spanProcessorFactory("simple", cfg, &te)
+	assert.NotNil(t, processor)
+
+	// Create a new tracer provider
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
+
+	// create span and trace ids
+	wantTraceID, err := trace.TraceIDFromHex("01020304050607080102040810203040")
+	assert.Nil(t, err)
+
+	spanID, err := trace.SpanIDFromHex("0102040810203040")
+	assert.Nil(t, err)
+
+	// Register the span processor with the tracer provider
+	tp.RegisterSpanProcessor(processor)
+
+	// Create a new span
+	spans := startTestSpan(t, tp, spanID, wantTraceID, 1)
+	span := spans[0]
+	span.End()
+	// Simple processor exports immediately, no need to flush
+	assert.Equal(t, 1, len(te.spans))
+	gotTraceID := te.spans[0].SpanContext().TraceID()
+	assert.Equal(t, wantTraceID, gotTraceID)
 }
 
 func startTestSpan(t *testing.T,
