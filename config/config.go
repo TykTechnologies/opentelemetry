@@ -26,8 +26,22 @@ type OpenTelemetry struct {
 	// - "tracecontext": tracecontext is a propagator that supports the W3C
 	// Trace Context format (https://www.w3.org/TR/trace-context/).
 	// - "b3": b3 is a propagator serializes SpanContext to/from B3 multi Headers format.
+	// - "custom": custom propagator reads from and writes to a custom header only.
+	// - "composite": composite propagator reads from custom header (priority) or standard headers,
+	//   and writes to both custom and standard headers.
 	// Defaults to "tracecontext".
 	ContextPropagation string `json:"context_propagation"`
+	// Name of custom header to use for trace ID instead of standard "traceparent".
+	// When set with context_propagation="custom", the gateway will extract trace context
+	// from this header and propagate it using the same custom header.
+	// When set with context_propagation="tracecontext" or "b3", the gateway will extract
+	// trace context from this header (priority) or standard headers (fallback), and propagate
+	// using standard headers only.
+	// When set with context_propagation="composite", the gateway will extract trace context
+	// from this header (priority) or standard headers (fallback), and propagate using both
+	// custom and standard headers.
+	// Example: "X-Correlation-ID", "X-Request-ID", "X-Trace-ID"
+	CustomTraceHeader string `json:"custom_trace_header"`
 	// TLS configuration for the exporter.
 	TLS TLS `json:"tls"`
 	// Defines the configurations to use in the sampler.
@@ -84,6 +98,8 @@ const (
 	// available context propagators
 	PROPAGATOR_TRACECONTEXT = "tracecontext"
 	PROPAGATOR_B3           = "b3"
+	PROPAGATOR_CUSTOM       = "custom"
+	PROPAGATOR_COMPOSITE    = "composite"
 
 	// available sampler types
 	ALWAYSON          = "AlwaysOn"

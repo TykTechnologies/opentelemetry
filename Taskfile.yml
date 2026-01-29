@@ -31,7 +31,7 @@ tasks:
      - tracetest test run -d ./e2e/basic/tests/example.yml -w -o pretty
 
   e2e-stop:
-    desc: Stop e2e enviroment.
+    desc: Stop e2e environment
     cmds:
       - docker compose  -f e2e/tracetest/docker-compose.yml -f e2e/basic/docker-compose.yml down --remove-orphans
 
