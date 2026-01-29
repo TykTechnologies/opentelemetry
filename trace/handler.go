@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -38,6 +39,7 @@ func (rw *responseWriterWithSize) Flush() {
 func NewHTTPHandler(name string, handler http.Handler, tp Provider, attr ...Attribute) http.Handler {
 	opts := []otelhttp.Option{
 		otelhttp.WithSpanNameFormatter(httpSpanNameFormatter),
+		otelhttp.WithPropagators(otel.GetTextMapPropagator()),
 	}
 
 	opts = append(opts, otelhttp.WithSpanOptions(
