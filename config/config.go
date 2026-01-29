@@ -22,6 +22,9 @@ type OpenTelemetry struct {
 	// Type of the span processor to use. Valid values are "simple" or "batch".
 	// Defaults to "batch".
 	SpanProcessorType string `json:"span_processor_type"`
+	// Configuration for the batch span processor.
+	// Only applies when SpanProcessorType is "batch".
+	SpanBatchConfig SpanBatchConfig `json:"span_batch_config"`
 	// Type of the context propagator to use. Valid values are:
 	// - "tracecontext": tracecontext is a propagator that supports the W3C
 	// Trace Context format (https://www.w3.org/TR/trace-context/).
@@ -68,6 +71,23 @@ type TLS struct {
 	// Options: ["1.0", "1.1", "1.2", "1.3"].
 	// Defaults to "1.2".
 	MinVersion string `json:"min_version"`
+}
+
+// SpanBatchConfig configures the batch span processor.
+type SpanBatchConfig struct {
+	// MaxQueueSize is the maximum queue size to buffer spans for delayed processing.
+	// If the queue gets full it drops the spans.
+	// The default value is 2048.
+	MaxQueueSize int `json:"max_queue_size"`
+	// MaxExportBatchSize is the maximum number of spans to process in a single batch.
+	// If there are more than one batch worth of spans then it processes multiple batches
+	// of spans one batch after the other without any delay.
+	// The default value is 512.
+	MaxExportBatchSize int `json:"max_export_batch_size"`
+	// BatchTimeout is the maximum duration for constructing a batch. Processor
+	// forcefully sends available spans when timeout is reached.
+	// The default value is 5 seconds.
+	BatchTimeout int `json:"batch_timeout"`
 }
 
 type Sampling struct {

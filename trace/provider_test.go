@@ -193,3 +193,147 @@ func Test_Type(t *testing.T) {
 		})
 	}
 }
+
+func TestProvider_WithSpanBatchConfig(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	// Setup HTTP server to receive spans
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	cfg := &config.OpenTelemetry{
+		Enabled:           true,
+		Exporter:          "http",
+		Endpoint:          server.URL,
+		ConnectionTimeout: 10,
+		SpanProcessorType: "batch",
+		SpanBatchConfig: config.SpanBatchConfig{
+			MaxQueueSize:       8192,
+			MaxExportBatchSize: 1024,
+			BatchTimeout:       3,
+		},
+	}
+
+	provider, err := NewProvider(WithContext(ctx), WithConfig(cfg))
+	assert.Nil(t, err)
+	assert.NotNil(t, provider)
+	defer provider.Shutdown(ctx)
+
+	// Verify provider is created successfully
+	assert.Equal(t, "otel", provider.Type())
+
+	// Create a tracer and span to verify it works
+	tracer := provider.Tracer()
+	assert.NotNil(t, tracer)
+
+	_, span := tracer.Start(ctx, "test-span")
+	assert.NotNil(t, span)
+	span.End()
+
+	// Force flush to ensure span is exported
+	tp, ok := provider.(*traceProvider)
+	assert.True(t, ok)
+
+	if sdkProvider, ok := tp.traceProvider.(*sdktrace.TracerProvider); ok {
+		err := sdkProvider.ForceFlush(ctx)
+		assert.Nil(t, err)
+	}
+}
+
+func TestProvider_BatchConfigValidation(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	// Setup HTTP server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	t.Run("warning when MaxExportBatchSize > MaxQueueSize", func(t *testing.T) {
+		cfg := &config.OpenTelemetry{
+			Enabled:           true,
+			Exporter:          "http",
+			Endpoint:          server.URL,
+			ConnectionTimeout: 10,
+			SpanProcessorType: "batch",
+			SpanBatchConfig: config.SpanBatchConfig{
+				MaxQueueSize:       512,
+				MaxExportBatchSize: 1024, // Greater than MaxQueueSize
+				BatchTimeout:       3,
+			},
+		}
+
+		// Create provider with mock logger
+		provider, err := NewProvider(
+			WithContext(ctx),
+			WithConfig(cfg),
+			WithLogger(&testLogger{t: t, expectWarning: true}),
+		)
+		assert.Nil(t, err)
+		assert.NotNil(t, provider)
+		defer provider.Shutdown(ctx)
+
+		// Verify provider is created successfully despite warning
+		assert.Equal(t, "otel", provider.Type())
+	})
+
+	t.Run("no warning when MaxExportBatchSize <= MaxQueueSize", func(t *testing.T) {
+		cfg := &config.OpenTelemetry{
+			Enabled:           true,
+			Exporter:          "http",
+			Endpoint:          server.URL,
+			ConnectionTimeout: 10,
+			SpanProcessorType: "batch",
+			SpanBatchConfig: config.SpanBatchConfig{
+				MaxQueueSize:       2048,
+				MaxExportBatchSize: 512, // Less than MaxQueueSize
+				BatchTimeout:       3,
+			},
+		}
+
+		provider, err := NewProvider(
+			WithContext(ctx),
+			WithConfig(cfg),
+			WithLogger(&testLogger{t: t, expectWarning: false}),
+		)
+		assert.Nil(t, err)
+		assert.NotNil(t, provider)
+		defer provider.Shutdown(ctx)
+
+		assert.Equal(t, "otel", provider.Type())
+	})
+}
+
+// testLogger is a simple logger for testing that tracks warnings
+type testLogger struct {
+	t             *testing.T
+	expectWarning bool
+	gotWarning    bool
+}
+
+func (l *testLogger) Info(args ...interface{}) {
+	msg := ""
+	for _, arg := range args {
+		if s, ok := arg.(string); ok {
+			msg += s
+		}
+	}
+
+	// Check if this is a warning message
+	if len(msg) > 0 && (msg[:7] == "Warning" || msg[:8] == "Warning:") {
+		l.gotWarning = true
+		if !l.expectWarning {
+			l.t.Errorf("Unexpected warning: %s", msg)
+		}
+	}
+}
+
+func (l *testLogger) Error(args ...interface{}) {
+	// Not used in this test
+}

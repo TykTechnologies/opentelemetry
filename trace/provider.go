@@ -98,8 +98,16 @@ func NewProvider(opts ...Option) (Provider, error) {
 		return provider, fmt.Errorf("failed to create exporter: %w", err)
 	}
 
+	// Validate and log batch config if using batch processor
+	if provider.cfg.SpanProcessorType == "batch" {
+		cfg := provider.cfg.SpanBatchConfig
+		if cfg.MaxExportBatchSize > 0 && cfg.MaxQueueSize > 0 && cfg.MaxExportBatchSize > cfg.MaxQueueSize {
+			provider.logger.Info("Warning: span_batch_config.max_export_batch_size is greater than max_queue_size, this may cause issues")
+		}
+	}
+
 	// create the span processor - this is what will send the spans to the exporter.
-	spanProcesor := spanProcessorFactory(provider.cfg.SpanProcessorType, exporter)
+	spanProcesor := spanProcessorFactory(provider.cfg.SpanProcessorType, provider.cfg.SpanBatchConfig, exporter)
 
 	// create the sampler based on the configs
 	samplerType := provider.cfg.Sampling.Type
