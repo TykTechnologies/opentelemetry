@@ -21,25 +21,7 @@ func TestCustomHeaderPropagator_Extract(t *testing.T) {
 		expectSampled bool
 	}{
 		{
-			name:          "valid trace context with flags",
-			headerName:    "X-Correlation-ID",
-			headerValue:   "0102030405060708090a0b0c0d0e0f10-1112131415161718-01",
-			expectValid:   true,
-			expectTraceID: "0102030405060708090a0b0c0d0e0f10",
-			expectSpanID:  "1112131415161718",
-			expectSampled: true,
-		},
-		{
-			name:          "valid trace context without flags",
-			headerName:    "X-Request-ID",
-			headerValue:   "0102030405060708090a0b0c0d0e0f10-1112131415161718",
-			expectValid:   true,
-			expectTraceID: "0102030405060708090a0b0c0d0e0f10",
-			expectSpanID:  "1112131415161718",
-			expectSampled: true,
-		},
-		{
-			name:          "trace ID only",
+			name:          "valid hex trace ID",
 			headerName:    "X-Trace-ID",
 			headerValue:   "0102030405060708090a0b0c0d0e0f10",
 			expectValid:   true,
@@ -57,7 +39,7 @@ func TestCustomHeaderPropagator_Extract(t *testing.T) {
 			expectSampled: true,
 		},
 		{
-			name:          "short trace ID with padding",
+			name:          "short correlation ID with padding",
 			headerName:    "X-Correlation-ID",
 			headerValue:   "abc123",
 			expectValid:   true,
@@ -66,13 +48,13 @@ func TestCustomHeaderPropagator_Extract(t *testing.T) {
 			expectSampled: true,
 		},
 		{
-			name:          "not sampled flag",
-			headerName:    "X-Correlation-ID",
-			headerValue:   "0102030405060708090a0b0c0d0e0f10-1112131415161718-00",
+			name:          "arbitrary correlation ID",
+			headerName:    "X-Request-ID",
+			headerValue:   "request-abc-123",
 			expectValid:   true,
-			expectTraceID: "0102030405060708090a0b0c0d0e0f10",
-			expectSpanID:  "1112131415161718",
-			expectSampled: false,
+			expectTraceID: "eeabc123000000000000000000000000", // 'e' from 'request', 'e' again, then 'abc123', padded
+			expectSpanID:  "eeabc12300000000",                 // First 16 chars
+			expectSampled: true,
 		},
 		{
 			name:        "empty header value",
@@ -81,9 +63,9 @@ func TestCustomHeaderPropagator_Extract(t *testing.T) {
 			expectValid: false,
 		},
 		{
-			name:        "invalid characters",
+			name:        "only non-hex characters",
 			headerName:  "X-Correlation-ID",
-			headerValue: "invalid-trace-id-with-non-hex-chars!!!",
+			headerValue: "xyz-ghi-jkl",
 			expectValid: false,
 		},
 	}
@@ -132,7 +114,7 @@ func TestCustomHeaderPropagator_Inject(t *testing.T) {
 			spanID:       "1112131415161718",
 			sampled:      true,
 			expectHeader: true,
-			expectValue:  "0102030405060708090a0b0c0d0e0f10-1112131415161718-01",
+			expectValue:  "0102030405060708090a0b0c0d0e0f10",
 		},
 		{
 			name:         "inject enabled with non-sampled trace",
@@ -142,7 +124,7 @@ func TestCustomHeaderPropagator_Inject(t *testing.T) {
 			spanID:       "1112131415161718",
 			sampled:      false,
 			expectHeader: true,
-			expectValue:  "0102030405060708090a0b0c0d0e0f10-1112131415161718-00",
+			expectValue:  "0102030405060708090a0b0c0d0e0f10",
 		},
 		{
 			name:         "inject disabled",
@@ -220,14 +202,40 @@ func TestCustomHeaderPropagator_Fields(t *testing.T) {
 
 func TestCustomHeaderPropagator_RoundTrip(t *testing.T) {
 	tests := []struct {
-		name       string
-		headerName string
-		inject     bool
+		name           string
+		headerName     string
+		inject         bool
+		originalValue  string
+		expectInjected string
+		expectTraceID  string
+		expectSpanID   string
 	}{
 		{
-			name:       "round trip with inject enabled",
-			headerName: "X-Correlation-ID",
-			inject:     true,
+			name:           "round trip with inject enabled - preserves original value",
+			headerName:     "X-Correlation-ID",
+			inject:         true,
+			originalValue:  "request-abc-123",
+			expectInjected: "request-abc-123",                  // Original value preserved
+			expectTraceID:  "eeabc123000000000000000000000000", // Normalised for OTel: 'e' from 'request', 'e' again, then 'abc123', padded
+			expectSpanID:   "eeabc12300000000",                 // First 16 chars of normalised trace ID
+		},
+		{
+			name:           "round trip with valid hex trace ID",
+			headerName:     "X-Correlation-ID",
+			inject:         true,
+			originalValue:  "0102030405060708090a0b0c0d0e0f10",
+			expectInjected: "0102030405060708090a0b0c0d0e0f10", // Original preserved
+			expectTraceID:  "0102030405060708090a0b0c0d0e0f10",
+			expectSpanID:   "0102030405060708",
+		},
+		{
+			name:           "round trip with UUID format",
+			headerName:     "X-Request-ID",
+			inject:         true,
+			originalValue:  "550e8400-e29b-41d4-a716-446655440000",
+			expectInjected: "550e8400-e29b-41d4-a716-446655440000", // Original preserved with dashes
+			expectTraceID:  "550e8400e29b41d4a716446655440000",     // Normalised (dashes removed)
+			expectSpanID:   "550e8400e29b41d4",
 		},
 		{
 			name:       "round trip with inject disabled (extract only)",
@@ -240,32 +248,42 @@ func TestCustomHeaderPropagator_RoundTrip(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			propagator := NewCustomHeaderPropagator(tt.headerName, tt.inject)
 
-			// Create original span context
-			originalTraceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
-			originalSpanID, _ := trace.SpanIDFromHex("1112131415161718")
-			originalSC := trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID:    originalTraceID,
-				SpanID:     originalSpanID,
-				TraceFlags: trace.FlagsSampled,
-			})
+			if tt.inject && tt.originalValue != "" {
+				// Set up carrier with original value
+				incomingCarrier := propagation.HeaderCarrier(http.Header{})
+				incomingCarrier.Set(tt.headerName, tt.originalValue)
 
-			ctx := trace.ContextWithSpanContext(context.Background(), originalSC)
-
-			// Inject
-			carrier := propagation.HeaderCarrier(http.Header{})
-			propagator.Inject(ctx, carrier)
-
-			if tt.inject {
 				// Extract
-				extractedCtx := propagator.Extract(context.Background(), carrier)
+				extractedCtx := propagator.Extract(context.Background(), incomingCarrier)
 				extractedSC := trace.SpanContextFromContext(extractedCtx)
 
-				// Verify round trip
-				assert.True(t, extractedSC.IsValid())
-				assert.Equal(t, originalTraceID, extractedSC.TraceID())
-				assert.Equal(t, originalSpanID, extractedSC.SpanID())
-				assert.Equal(t, originalSC.IsSampled(), extractedSC.IsSampled())
-			} else {
+				// Verify extraction worked
+				assert.True(t, extractedSC.IsValid(), "expected valid span context after extraction")
+				assert.Equal(t, tt.expectTraceID, extractedSC.TraceID().String(), "trace ID mismatch")
+				assert.Equal(t, tt.expectSpanID, extractedSC.SpanID().String(), "span ID mismatch")
+
+				// Inject to new carrier
+				outgoingCarrier := propagation.HeaderCarrier(http.Header{})
+				propagator.Inject(extractedCtx, outgoingCarrier)
+
+				// Verify original value is preserved
+				injectedValue := outgoingCarrier.Get(tt.headerName)
+				assert.Equal(t, tt.expectInjected, injectedValue, "injected value should match original")
+			} else if !tt.inject {
+				// Test inject disabled
+				originalTraceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
+				originalSpanID, _ := trace.SpanIDFromHex("1112131415161718")
+				originalSC := trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    originalTraceID,
+					SpanID:     originalSpanID,
+					TraceFlags: trace.FlagsSampled,
+				})
+
+				ctx := trace.ContextWithSpanContext(context.Background(), originalSC)
+
+				carrier := propagation.HeaderCarrier(http.Header{})
+				propagator.Inject(ctx, carrier)
+
 				// When inject is disabled, header should not be set
 				value := carrier.Get(tt.headerName)
 				assert.Empty(t, value)
@@ -317,44 +335,6 @@ func TestCustomHeaderPropagator_NormaliseTraceID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := propagator.normaliseTraceID(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestCustomHeaderPropagator_NormaliseSpanID(t *testing.T) {
-	propagator := NewCustomHeaderPropagator("X-Test", true)
-
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "valid 16 char hex",
-			input:    "1112131415161718",
-			expected: "1112131415161718",
-		},
-		{
-			name:     "uppercase to lowercase",
-			input:    "1112131415161718",
-			expected: "1112131415161718",
-		},
-		{
-			name:     "short ID with padding",
-			input:    "abc123",
-			expected: "abc1230000000000",
-		},
-		{
-			name:     "long ID truncated",
-			input:    "11121314151617181920",
-			expected: "1112131415161718",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := propagator.normaliseSpanID(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
