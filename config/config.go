@@ -49,6 +49,18 @@ type OpenTelemetry struct {
 	TLS TLS `json:"tls"`
 	// Defines the configurations to use in the sampler.
 	Sampling Sampling `json:"sampling"`
+	// Configuration for OpenTelemetry metrics.
+	Metrics MetricsConfig `json:"metrics"`
+}
+
+// MetricsConfig holds the configuration for OpenTelemetry metrics.
+type MetricsConfig struct {
+	// A flag that can be used to enable or disable metrics export.
+	// If not set, defaults to the parent OpenTelemetry.Enabled value.
+	Enabled *bool `json:"enabled,omitempty"`
+	// The interval in seconds at which metrics are exported.
+	// Defaults to 60 seconds.
+	ExportInterval int `json:"export_interval"`
 }
 
 type TLS struct {
@@ -163,5 +175,15 @@ func (c *OpenTelemetry) SetDefaults() {
 
 	if c.Sampling.Type == TRACEIDRATIOBASED && c.Sampling.Rate == 0 {
 		c.Sampling.Rate = 0.5
+	}
+
+	// Set metrics defaults
+	if c.Metrics.Enabled == nil {
+		// Default to parent Enabled value
+		c.Metrics.Enabled = &c.Enabled
+	}
+
+	if c.Metrics.ExportInterval == 0 {
+		c.Metrics.ExportInterval = 60
 	}
 }

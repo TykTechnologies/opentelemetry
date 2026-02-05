@@ -6,6 +6,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+// ptr returns a pointer to the given value.
+func ptr[T any](v T) *T {
+	return &v
+}
+
 func Test_SetDefault(t *testing.T) {
 	tcs := []struct {
 		name        string
@@ -48,6 +53,10 @@ func Test_SetDefault(t *testing.T) {
 					Type: TRACEIDRATIOBASED,
 					Rate: 0.8,
 				},
+				Metrics: MetricsConfig{
+					Enabled:        ptr(true),
+					ExportInterval: 60,
+				},
 			},
 		},
 		{
@@ -65,6 +74,10 @@ func Test_SetDefault(t *testing.T) {
 				ContextPropagation: "tracecontext",
 				Sampling: Sampling{
 					Type: ALWAYSON,
+				},
+				Metrics: MetricsConfig{
+					Enabled:        ptr(true),
+					ExportInterval: 60,
 				},
 			},
 		},
@@ -87,6 +100,10 @@ func Test_SetDefault(t *testing.T) {
 				Sampling: Sampling{
 					Type: TRACEIDRATIOBASED,
 					Rate: 0.5,
+				},
+				Metrics: MetricsConfig{
+					Enabled:        ptr(true),
+					ExportInterval: 60,
 				},
 			},
 		},
