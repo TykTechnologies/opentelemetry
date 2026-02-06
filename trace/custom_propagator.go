@@ -40,13 +40,6 @@ func (p *CustomHeaderPropagator) Inject(ctx context.Context, carrier propagation
 	if originalValue, ok := ctx.Value(customHeaderContextKey{}).(string); ok && originalValue != "" {
 		// Inject the original value unchanged to preserve correlation IDs for logging
 		carrier.Set(p.traceHeader, originalValue)
-		return
-	}
-
-	// If no original value, use the normalised trace ID
-	sc := trace.SpanContextFromContext(ctx)
-	if sc.IsValid() {
-		carrier.Set(p.traceHeader, sc.TraceID().String())
 	}
 }
 
