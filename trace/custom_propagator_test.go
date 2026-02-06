@@ -107,24 +107,22 @@ func TestCustomHeaderPropagator_Inject(t *testing.T) {
 		expectValue  string
 	}{
 		{
-			name:         "inject enabled with sampled trace",
+			name:         "inject enabled with sampled trace but no original value",
 			headerName:   "X-Correlation-ID",
 			inject:       true,
 			traceID:      "0102030405060708090a0b0c0d0e0f10",
 			spanID:       "1112131415161718",
 			sampled:      true,
-			expectHeader: true,
-			expectValue:  "0102030405060708090a0b0c0d0e0f10",
+			expectHeader: false,
 		},
 		{
-			name:         "inject enabled with non-sampled trace",
+			name:         "inject enabled with non-sampled trace but no original value",
 			headerName:   "X-Request-ID",
 			inject:       true,
 			traceID:      "0102030405060708090a0b0c0d0e0f10",
 			spanID:       "1112131415161718",
 			sampled:      false,
-			expectHeader: true,
-			expectValue:  "0102030405060708090a0b0c0d0e0f10",
+			expectHeader: false,
 		},
 		{
 			name:         "inject disabled",
