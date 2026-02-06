@@ -3,12 +3,15 @@ package metric
 import (
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/otel"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 const (
@@ -17,6 +20,20 @@ const (
 	// OtelProvider indicates an OpenTelemetry provider type.
 	OtelProvider = "otel"
 )
+
+// ExportStats contains statistics about metric exports.
+type ExportStats struct {
+	// TotalExports is the total number of export attempts.
+	TotalExports int64
+	// SuccessfulExports is the number of successful exports.
+	SuccessfulExports int64
+	// FailedExports is the number of failed exports.
+	FailedExports int64
+	// LastExportTime is the time of the last export attempt.
+	LastExportTime time.Time
+	// LastSuccessTime is the time of the last successful export.
+	LastSuccessTime time.Time
+}
 
 // Provider is the interface that wraps the basic methods of a meter provider.
 // If misconfigured or disabled, the provider will return a noop meter and
@@ -30,6 +47,7 @@ type Provider interface {
 	Type() string
 	// Enabled returns whether the provider is enabled and recording metrics.
 	Enabled() bool
+
 	// NewCounter creates a new counter with the given name, description, and unit.
 	// Returns a nil-safe Counter that can be used even if the provider is disabled.
 	NewCounter(name, description, unit string) (*Counter, error)
@@ -37,6 +55,23 @@ type Provider interface {
 	// If buckets is nil or empty, DefaultLatencyBuckets will be used.
 	// Returns a nil-safe Histogram that can be used even if the provider is disabled.
 	NewHistogram(name, description, unit string, buckets []float64) (*Histogram, error)
+	// NewGauge creates a new gauge with the given name, description, and unit.
+	// Use gauges for values that can go up and down, like pool sizes or temperatures.
+	// Returns a nil-safe Gauge that can be used even if the provider is disabled.
+	NewGauge(name, description, unit string) (*Gauge, error)
+	// NewUpDownCounter creates a new up-down counter with the given name, description, and unit.
+	// Use up-down counters for values that can increase or decrease, like active connections.
+	// Returns a nil-safe UpDownCounter that can be used even if the provider is disabled.
+	NewUpDownCounter(name, description, unit string) (*UpDownCounter, error)
+
+	// Healthy returns whether the exporter is healthy (last export succeeded).
+	Healthy() bool
+	// LastExportError returns the last export error, if any.
+	LastExportError() error
+	// GetExportStats returns statistics about metric exports.
+	GetExportStats() ExportStats
+	// IsMetricDisabled returns whether a metric is disabled by configuration.
+	IsMetricDisabled(name string) bool
 }
 
 type meterProvider struct {
@@ -51,6 +86,17 @@ type meterProvider struct {
 	enabled      bool
 
 	resources resourceConfig
+
+	// Health and stats tracking
+	healthy          atomic.Bool
+	lastExportError  atomic.Value // stores error
+	totalExports     atomic.Int64
+	successExports   atomic.Int64
+	failedExports    atomic.Int64
+	lastExportTime   atomic.Value // stores time.Time
+	lastSuccessTime  atomic.Value // stores time.Time
+	disabledMetrics  map[string]struct{}
+	disabledMetricsMu sync.RWMutex
 }
 
 // NewProvider creates a new meter provider with the given options.
@@ -86,6 +132,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 		ctx:                context.Background(),
 		providerType:       NoopProvider,
 		enabled:            false,
+		disabledMetrics:    make(map[string]struct{}),
 	}
 
 	// Apply the given options.
@@ -95,6 +142,11 @@ func NewProvider(opts ...Option) (Provider, error) {
 
 	// Set the config defaults - this does not override the config values.
 	provider.cfg.SetDefaults()
+
+	// Build disabled metrics map for O(1) lookups.
+	for _, name := range provider.cfg.Metrics.DisabledMetrics {
+		provider.disabledMetrics[name] = struct{}{}
+	}
 
 	// Check if metrics are enabled.
 	metricsEnabled := provider.cfg.Metrics.Enabled != nil && *provider.cfg.Metrics.Enabled
@@ -111,28 +163,43 @@ func NewProvider(opts ...Option) (Provider, error) {
 		return provider, fmt.Errorf("failed to create resource: %w", err)
 	}
 
-	// Create the exporter - here's where connecting to the collector happens.
+	// Create the exporter with retry configuration.
 	exporter, err := exporterFactory(provider.ctx, provider.cfg)
 	if err != nil {
 		provider.logger.Error("failed to create metric exporter", err)
 		return provider, fmt.Errorf("failed to create metric exporter: %w", err)
 	}
 
+	// Wrap exporter with stats tracking.
+	wrappedExporter := &statsExporter{
+		exporter: exporter,
+		provider: provider,
+	}
+
 	// Create the periodic reader with the configured export interval.
 	exportInterval := time.Duration(provider.cfg.Metrics.ExportInterval) * time.Second
-	reader := sdkmetric.NewPeriodicReader(exporter, sdkmetric.WithInterval(exportInterval))
+	readerOpts := []sdkmetric.PeriodicReaderOption{
+		sdkmetric.WithInterval(exportInterval),
+	}
 
-	// Create the meter provider.
-	meterProv := sdkmetric.NewMeterProvider(
+	reader := sdkmetric.NewPeriodicReader(wrappedExporter, readerOpts...)
+
+	// Build meter provider options.
+	meterProvOpts := []sdkmetric.Option{
 		sdkmetric.WithResource(resource),
 		sdkmetric.WithReader(reader),
-	)
+	}
+
+
+	// Create the meter provider.
+	meterProv := sdkmetric.NewMeterProvider(meterProvOpts...)
 
 	// Set the local meter provider.
 	provider.meterProvider = meterProv
 	provider.providerShutdownFn = meterProv.Shutdown
 	provider.providerType = OtelProvider
 	provider.enabled = true
+	provider.healthy.Store(true)
 
 	// Set global otel meter provider.
 	otel.SetMeterProvider(meterProv)
@@ -147,12 +214,65 @@ func NewProvider(opts ...Option) (Provider, error) {
 	return provider, nil
 }
 
+// deltaTemporalitySelector returns delta temporality for all instruments.
+func deltaTemporalitySelector(sdkmetric.InstrumentKind) metricdata.Temporality {
+	return metricdata.DeltaTemporality
+}
+
+// statsExporter wraps an exporter to track export statistics.
+type statsExporter struct {
+	exporter sdkmetric.Exporter
+	provider *meterProvider
+}
+
+func (e *statsExporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+	e.provider.totalExports.Add(1)
+	e.provider.lastExportTime.Store(time.Now())
+
+	err := e.exporter.Export(ctx, rm)
+	if err != nil {
+		e.provider.failedExports.Add(1)
+		e.provider.lastExportError.Store(err)
+		e.provider.healthy.Store(false)
+		e.provider.logger.Error("metric export failed", err)
+		return err
+	}
+
+	e.provider.successExports.Add(1)
+	e.provider.lastSuccessTime.Store(time.Now())
+	e.provider.healthy.Store(true)
+	e.provider.lastExportError.Store(error(nil))
+	return nil
+}
+
+func (e *statsExporter) Temporality(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+	return e.exporter.Temporality(kind)
+}
+
+func (e *statsExporter) Aggregation(kind sdkmetric.InstrumentKind) sdkmetric.Aggregation {
+	return e.exporter.Aggregation(kind)
+}
+
+func (e *statsExporter) Shutdown(ctx context.Context) error {
+	return e.exporter.Shutdown(ctx)
+}
+
+func (e *statsExporter) ForceFlush(ctx context.Context) error {
+	return e.exporter.ForceFlush(ctx)
+}
+
 func (mp *meterProvider) Shutdown(ctx context.Context) error {
 	if mp.providerShutdownFn == nil {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(mp.cfg.ConnectionTimeout)*time.Second)
+	// Use ShutdownTimeout if configured, otherwise fall back to ConnectionTimeout.
+	timeout := mp.cfg.Metrics.ShutdownTimeout
+	if timeout == 0 {
+		timeout = mp.cfg.ConnectionTimeout
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	defer cancel()
 
 	return mp.providerShutdownFn(ctx)
@@ -170,8 +290,56 @@ func (mp *meterProvider) Enabled() bool {
 	return mp.enabled
 }
 
-func (mp *meterProvider) NewCounter(name, description, unit string) (*Counter, error) {
+func (mp *meterProvider) Healthy() bool {
 	if !mp.enabled {
+		return true // Noop provider is always "healthy"
+	}
+	return mp.healthy.Load()
+}
+
+func (mp *meterProvider) LastExportError() error {
+	if !mp.enabled {
+		return nil
+	}
+	if v := mp.lastExportError.Load(); v != nil {
+		if err, ok := v.(error); ok {
+			return err
+		}
+	}
+	return nil
+}
+
+func (mp *meterProvider) GetExportStats() ExportStats {
+	stats := ExportStats{
+		TotalExports:      mp.totalExports.Load(),
+		SuccessfulExports: mp.successExports.Load(),
+		FailedExports:     mp.failedExports.Load(),
+	}
+
+	if v := mp.lastExportTime.Load(); v != nil {
+		if t, ok := v.(time.Time); ok {
+			stats.LastExportTime = t
+		}
+	}
+
+	if v := mp.lastSuccessTime.Load(); v != nil {
+		if t, ok := v.(time.Time); ok {
+			stats.LastSuccessTime = t
+		}
+	}
+
+	return stats
+}
+
+func (mp *meterProvider) IsMetricDisabled(name string) bool {
+	mp.disabledMetricsMu.RLock()
+	defer mp.disabledMetricsMu.RUnlock()
+	_, disabled := mp.disabledMetrics[name]
+	return disabled
+}
+
+func (mp *meterProvider) NewCounter(name, description, unit string) (*Counter, error) {
+	if !mp.enabled || mp.IsMetricDisabled(name) {
 		return &Counter{enabled: false}, nil
 	}
 
@@ -191,7 +359,7 @@ func (mp *meterProvider) NewCounter(name, description, unit string) (*Counter, e
 }
 
 func (mp *meterProvider) NewHistogram(name, description, unit string, buckets []float64) (*Histogram, error) {
-	if !mp.enabled {
+	if !mp.enabled || mp.IsMetricDisabled(name) {
 		return &Histogram{enabled: false}, nil
 	}
 
@@ -212,5 +380,45 @@ func (mp *meterProvider) NewHistogram(name, description, unit string, buckets []
 	return &Histogram{
 		histogram: histogram,
 		enabled:   true,
+	}, nil
+}
+
+func (mp *meterProvider) NewGauge(name, description, unit string) (*Gauge, error) {
+	if !mp.enabled || mp.IsMetricDisabled(name) {
+		return &Gauge{enabled: false}, nil
+	}
+
+	gauge, err := mp.Meter().Float64Gauge(
+		name,
+		otelmetric.WithDescription(description),
+		otelmetric.WithUnit(unit),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Gauge{
+		gauge:   gauge,
+		enabled: true,
+	}, nil
+}
+
+func (mp *meterProvider) NewUpDownCounter(name, description, unit string) (*UpDownCounter, error) {
+	if !mp.enabled || mp.IsMetricDisabled(name) {
+		return &UpDownCounter{enabled: false}, nil
+	}
+
+	counter, err := mp.Meter().Int64UpDownCounter(
+		name,
+		otelmetric.WithDescription(description),
+		otelmetric.WithUnit(unit),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UpDownCounter{
+		counter: counter,
+		enabled: true,
 	}, nil
 }

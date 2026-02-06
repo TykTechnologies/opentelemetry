@@ -61,6 +61,41 @@ type MetricsConfig struct {
 	// The interval in seconds at which metrics are exported.
 	// Defaults to 60 seconds.
 	ExportInterval int `json:"export_interval"`
+
+	// Temporality defines the aggregation temporality for metrics.
+	// Valid values are "cumulative" (default) or "delta".
+	// Cumulative is preferred for Prometheus-style backends.
+	// Delta is preferred for some cloud backends like AWS CloudWatch.
+	Temporality string `json:"temporality"`
+
+	// ShutdownTimeout is the timeout in seconds for graceful shutdown of the exporter.
+	// Defaults to 30 seconds.
+	ShutdownTimeout int `json:"shutdown_timeout"`
+
+	// DisabledMetrics is a list of metric names that should not be collected.
+	// Use this to selectively disable expensive or unwanted metrics in production.
+	// Example: ["tyk.upstream.latency"]
+	DisabledMetrics []string `json:"disabled_metrics"`
+
+	// Retry configuration for exporter failures.
+	Retry MetricsRetryConfig `json:"retry"`
+}
+
+// MetricsRetryConfig configures retry behavior for metric export failures.
+type MetricsRetryConfig struct {
+	// Enabled enables retry on export failures.
+	// Defaults to true.
+	Enabled *bool `json:"enabled,omitempty"`
+	// InitialInterval is the initial backoff interval in milliseconds.
+	// Defaults to 5000 (5 seconds).
+	InitialInterval int `json:"initial_interval"`
+	// MaxInterval is the maximum backoff interval in milliseconds.
+	// Defaults to 30000 (30 seconds).
+	MaxInterval int `json:"max_interval"`
+	// MaxElapsedTime is the maximum total time in milliseconds to keep retrying.
+	// After this duration, the export is abandoned.
+	// Defaults to 60000 (1 minute).
+	MaxElapsedTime int `json:"max_elapsed_time"`
 }
 
 type TLS struct {
@@ -137,6 +172,10 @@ const (
 	ALWAYSON          = "AlwaysOn"
 	ALWAYSOFF         = "AlwaysOff"
 	TRACEIDRATIOBASED = "TraceIDRatioBased"
+
+	// available metric temporality types
+	TEMPORALITY_CUMULATIVE = "cumulative"
+	TEMPORALITY_DELTA      = "delta"
 )
 
 // SetDefaults sets the default values for the OpenTelemetry config.
@@ -185,5 +224,31 @@ func (c *OpenTelemetry) SetDefaults() {
 
 	if c.Metrics.ExportInterval == 0 {
 		c.Metrics.ExportInterval = 60
+	}
+
+	if c.Metrics.Temporality == "" {
+		c.Metrics.Temporality = TEMPORALITY_CUMULATIVE
+	}
+
+	if c.Metrics.ShutdownTimeout == 0 {
+		c.Metrics.ShutdownTimeout = 30
+	}
+
+	// Set retry defaults
+	if c.Metrics.Retry.Enabled == nil {
+		enabled := true
+		c.Metrics.Retry.Enabled = &enabled
+	}
+
+	if c.Metrics.Retry.InitialInterval == 0 {
+		c.Metrics.Retry.InitialInterval = 5000 // 5 seconds
+	}
+
+	if c.Metrics.Retry.MaxInterval == 0 {
+		c.Metrics.Retry.MaxInterval = 30000 // 30 seconds
+	}
+
+	if c.Metrics.Retry.MaxElapsedTime == 0 {
+		c.Metrics.Retry.MaxElapsedTime = 60000 // 1 minute
 	}
 }

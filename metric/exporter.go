@@ -37,6 +37,16 @@ func newGRPCExporter(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.
 		otlpmetricgrpc.WithHeaders(cfg.Headers),
 	}
 
+	// Configure retry if enabled.
+	if cfg.Metrics.Retry.Enabled != nil && *cfg.Metrics.Retry.Enabled {
+		clientOptions = append(clientOptions, otlpmetricgrpc.WithRetry(otlpmetricgrpc.RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Duration(cfg.Metrics.Retry.InitialInterval) * time.Millisecond,
+			MaxInterval:     time.Duration(cfg.Metrics.Retry.MaxInterval) * time.Millisecond,
+			MaxElapsedTime:  time.Duration(cfg.Metrics.Retry.MaxElapsedTime) * time.Millisecond,
+		}))
+	}
+
 	isTLSDisabled := !cfg.TLS.Enable
 
 	if isTLSDisabled {
@@ -64,6 +74,16 @@ func newHTTPExporter(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.
 		otlpmetrichttp.WithEndpoint(endpoint),
 		otlpmetrichttp.WithTimeout(time.Duration(cfg.ConnectionTimeout) * time.Second),
 		otlpmetrichttp.WithHeaders(cfg.Headers),
+	}
+
+	// Configure retry if enabled.
+	if cfg.Metrics.Retry.Enabled != nil && *cfg.Metrics.Retry.Enabled {
+		clientOptions = append(clientOptions, otlpmetrichttp.WithRetry(otlpmetrichttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Duration(cfg.Metrics.Retry.InitialInterval) * time.Millisecond,
+			MaxInterval:     time.Duration(cfg.Metrics.Retry.MaxInterval) * time.Millisecond,
+			MaxElapsedTime:  time.Duration(cfg.Metrics.Retry.MaxElapsedTime) * time.Millisecond,
+		}))
 	}
 
 	isTLSDisabled := !cfg.TLS.Enable
