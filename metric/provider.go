@@ -7,7 +7,7 @@ import (
 
 	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -19,28 +19,36 @@ const (
 )
 
 // Provider is the interface that wraps the basic methods of a meter provider.
-// If misconfigured or disabled, the provider will return a noop meter.
+// If misconfigured or disabled, the provider will return a noop meter and
+// instruments that silently do nothing.
 type Provider interface {
 	// Shutdown executes the underlying exporter shutdown function.
 	Shutdown(context.Context) error
 	// Meter returns a meter with pre-configured name. It's used to create metrics.
-	Meter() metric.Meter
+	Meter() otelmetric.Meter
 	// Type returns the type of the provider, it can be either "noop" or "otel".
 	Type() string
-	// Recorder returns the common RED metrics recorder.
-	Recorder() *Recorder
+	// Enabled returns whether the provider is enabled and recording metrics.
+	Enabled() bool
+	// NewCounter creates a new counter with the given name, description, and unit.
+	// Returns a nil-safe Counter that can be used even if the provider is disabled.
+	NewCounter(name, description, unit string) (*Counter, error)
+	// NewHistogram creates a new histogram with the given name, description, unit, and bucket boundaries.
+	// If buckets is nil or empty, DefaultLatencyBuckets will be used.
+	// Returns a nil-safe Histogram that can be used even if the provider is disabled.
+	NewHistogram(name, description, unit string, buckets []float64) (*Histogram, error)
 }
 
 type meterProvider struct {
-	meterProvider      metric.MeterProvider
+	meterProvider      otelmetric.MeterProvider
 	providerShutdownFn func(context.Context) error
-	recorder           *Recorder
 
 	cfg    *config.OpenTelemetry
 	logger Logger
 
 	ctx          context.Context
 	providerType string
+	enabled      bool
 
 	resources resourceConfig
 }
@@ -66,6 +74,9 @@ type meterProvider struct {
 //	if err != nil {
 //		panic(err)
 //	}
+//
+//	counter, _ := provider.NewCounter("my.counter", "A counter", "1")
+//	counter.Add(ctx, 1, attribute.String("key", "value"))
 func NewProvider(opts ...Option) (Provider, error) {
 	provider := &meterProvider{
 		meterProvider:      otel.GetMeterProvider(),
@@ -74,7 +85,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 		cfg:                &config.OpenTelemetry{},
 		ctx:                context.Background(),
 		providerType:       NoopProvider,
-		recorder:           nil,
+		enabled:            false,
 	}
 
 	// Apply the given options.
@@ -90,7 +101,6 @@ func NewProvider(opts ...Option) (Provider, error) {
 
 	// If the provider is not enabled or metrics are not enabled, return a noop provider.
 	if !provider.cfg.Enabled || !metricsEnabled {
-		provider.recorder = newNoopRecorder()
 		return provider, nil
 	}
 
@@ -122,6 +132,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 	provider.meterProvider = meterProv
 	provider.providerShutdownFn = meterProv.Shutdown
 	provider.providerType = OtelProvider
+	provider.enabled = true
 
 	// Set global otel meter provider.
 	otel.SetMeterProvider(meterProv)
@@ -130,15 +141,6 @@ func NewProvider(opts ...Option) (Provider, error) {
 	otel.SetErrorHandler(&errHandler{
 		logger: provider.logger,
 	})
-
-	// Create the recorder with the meter.
-	meter := meterProv.Meter(provider.cfg.ResourceName)
-	recorder, err := newRecorder(meter)
-	if err != nil {
-		provider.logger.Error("failed to create metrics recorder", err)
-		return provider, fmt.Errorf("failed to create metrics recorder: %w", err)
-	}
-	provider.recorder = recorder
 
 	provider.logger.Info("Meter provider initialized successfully")
 
@@ -156,7 +158,7 @@ func (mp *meterProvider) Shutdown(ctx context.Context) error {
 	return mp.providerShutdownFn(ctx)
 }
 
-func (mp *meterProvider) Meter() metric.Meter {
+func (mp *meterProvider) Meter() otelmetric.Meter {
 	return mp.meterProvider.Meter(mp.cfg.ResourceName)
 }
 
@@ -164,6 +166,51 @@ func (mp *meterProvider) Type() string {
 	return mp.providerType
 }
 
-func (mp *meterProvider) Recorder() *Recorder {
-	return mp.recorder
+func (mp *meterProvider) Enabled() bool {
+	return mp.enabled
+}
+
+func (mp *meterProvider) NewCounter(name, description, unit string) (*Counter, error) {
+	if !mp.enabled {
+		return &Counter{enabled: false}, nil
+	}
+
+	counter, err := mp.Meter().Int64Counter(
+		name,
+		otelmetric.WithDescription(description),
+		otelmetric.WithUnit(unit),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Counter{
+		counter: counter,
+		enabled: true,
+	}, nil
+}
+
+func (mp *meterProvider) NewHistogram(name, description, unit string, buckets []float64) (*Histogram, error) {
+	if !mp.enabled {
+		return &Histogram{enabled: false}, nil
+	}
+
+	if len(buckets) == 0 {
+		buckets = DefaultLatencyBuckets
+	}
+
+	histogram, err := mp.Meter().Float64Histogram(
+		name,
+		otelmetric.WithDescription(description),
+		otelmetric.WithUnit(unit),
+		otelmetric.WithExplicitBucketBoundaries(buckets...),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Histogram{
+		histogram: histogram,
+		enabled:   true,
+	}, nil
 }

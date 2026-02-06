@@ -21,8 +21,7 @@ func TestNewProvider_Disabled(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, provider)
 	assert.Equal(t, NoopProvider, provider.Type())
-	assert.NotNil(t, provider.Recorder())
-	assert.False(t, provider.Recorder().Enabled())
+	assert.False(t, provider.Enabled())
 }
 
 func TestNewProvider_MetricsDisabled(t *testing.T) {
@@ -44,19 +43,75 @@ func TestNewProvider_MetricsDisabled(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, provider)
 	assert.Equal(t, NoopProvider, provider.Type())
-	assert.NotNil(t, provider.Recorder())
-	assert.False(t, provider.Recorder().Enabled())
+	assert.False(t, provider.Enabled())
 }
 
-func TestRecorder_Record_NoopWhenNil(t *testing.T) {
-	var recorder *Recorder
+func TestCounter_Add_NoopWhenNil(t *testing.T) {
+	var counter *Counter
 	// Should not panic
-	recorder.Record(context.Background(), Attributes{}, Latency{})
+	counter.Add(context.Background(), 1)
+	assert.False(t, counter.Enabled())
 }
 
-func TestRecorder_Record_NoopWhenDisabled(t *testing.T) {
-	recorder := newNoopRecorder()
+func TestCounter_Add_NoopWhenDisabled(t *testing.T) {
+	counter := &Counter{enabled: false}
 	// Should not panic
-	recorder.Record(context.Background(), Attributes{}, Latency{})
-	assert.False(t, recorder.Enabled())
+	counter.Add(context.Background(), 1)
+	assert.False(t, counter.Enabled())
+}
+
+func TestHistogram_Record_NoopWhenNil(t *testing.T) {
+	var histogram *Histogram
+	// Should not panic
+	histogram.Record(context.Background(), 1.0)
+	assert.False(t, histogram.Enabled())
+}
+
+func TestHistogram_Record_NoopWhenDisabled(t *testing.T) {
+	histogram := &Histogram{enabled: false}
+	// Should not panic
+	histogram.Record(context.Background(), 1.0)
+	assert.False(t, histogram.Enabled())
+}
+
+func TestNewProvider_NewCounter_Disabled(t *testing.T) {
+	cfg := &config.OpenTelemetry{
+		Enabled: false,
+	}
+
+	provider, err := NewProvider(
+		WithContext(context.Background()),
+		WithConfig(cfg),
+	)
+
+	assert.NoError(t, err)
+
+	counter, err := provider.NewCounter("test.counter", "A test counter", "1")
+	assert.NoError(t, err)
+	assert.NotNil(t, counter)
+	assert.False(t, counter.Enabled())
+
+	// Should not panic
+	counter.Add(context.Background(), 1)
+}
+
+func TestNewProvider_NewHistogram_Disabled(t *testing.T) {
+	cfg := &config.OpenTelemetry{
+		Enabled: false,
+	}
+
+	provider, err := NewProvider(
+		WithContext(context.Background()),
+		WithConfig(cfg),
+	)
+
+	assert.NoError(t, err)
+
+	histogram, err := provider.NewHistogram("test.histogram", "A test histogram", "ms", nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, histogram)
+	assert.False(t, histogram.Enabled())
+
+	// Should not panic
+	histogram.Record(context.Background(), 1.0)
 }
