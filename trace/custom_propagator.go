@@ -2,6 +2,7 @@ package trace
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"strings"
 
@@ -109,33 +110,50 @@ func (p *CustomHeaderPropagator) normaliseTraceID(id string) string {
 	return p.normaliseHexID(id, 32)
 }
 
-// normaliseHexID normalises an ID to the specified length of hex characters.
-// Handles UUIDs by removing dashes and padding/truncating as needed.
-func (p *CustomHeaderPropagator) normaliseHexID(id string, targetLen int) string {
-	// Remove dashes (for UUID format)
-	id = strings.ReplaceAll(id, "-", "")
-
-	// Remove any non-hex characters
-	id = strings.Map(func(r rune) rune {
-		if (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F') {
-			return r
-		}
-		return -1
-	}, id)
-
-	id = strings.ToLower(id)
-
-	// Pad or truncate to target length
-	if len(id) < targetLen {
-		id = id + strings.Repeat("0", targetLen-len(id))
-	} else if len(id) > targetLen {
-		id = id[:targetLen]
+// isValidHex reports whether s is a non-empty string containing only hex characters.
+func isValidHex(s string) bool {
+	if s == "" {
+		return false
 	}
+	for _, r := range s {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+			return false
+		}
+	}
+	return true
+}
 
-	// Validate it's valid hex
-	if _, err := hex.DecodeString(id); err != nil {
+// normaliseHexID normalises an ID to the specified length of hex characters.
+// For valid hex strings (including UUIDs after dash removal): lowercase, pad/truncate.
+// For non-hex strings: SHA-256 hash the original input to produce a deterministic hex ID.
+func (p *CustomHeaderPropagator) normaliseHexID(id string, targetLen int) string {
+	if id == "" {
 		return ""
 	}
 
-	return id
+	// Preserve original input for hashing before any mutation
+	original := id
+
+	// Remove dashes (for UUID format)
+	stripped := strings.ReplaceAll(id, "-", "")
+
+	if isValidHex(stripped) {
+		// Valid hex path: lowercase, pad or truncate to target length
+		stripped = strings.ToLower(stripped)
+		if len(stripped) < targetLen {
+			stripped = stripped + strings.Repeat("0", targetLen-len(stripped))
+		} else if len(stripped) > targetLen {
+			stripped = stripped[:targetLen]
+		}
+		return stripped
+	}
+
+	// Non-hex path: SHA-256 hash the original input for a deterministic, collision-resistant ID
+	hash := sha256.Sum256([]byte(original))
+	// Take the first targetLen/2 bytes and hex-encode to get targetLen hex chars
+	numBytes := targetLen / 2
+	if numBytes > len(hash) {
+		numBytes = len(hash)
+	}
+	return hex.EncodeToString(hash[:numBytes])
 }
