@@ -168,6 +168,69 @@ func TestCustomHeaderPropagator_Inject(t *testing.T) {
 	}
 }
 
+func TestCustomHeaderPropagator_Inject_RemovesPassthroughHeader(t *testing.T) {
+	// This test simulates the hybrid mode scenario where the reverse proxy
+	// clones all incoming request headers to the outgoing request. When
+	// inject=false (hybrid mode), the propagator must actively remove the
+	// custom header from the carrier so only standard headers reach upstream.
+	propagator := NewCustomHeaderPropagator("X-Correlation-ID", false)
+
+	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
+	spanID, _ := trace.SpanIDFromHex("1112131415161718")
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    traceID,
+		SpanID:     spanID,
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+
+	// Pre-populate the carrier with the custom header (simulating reverse proxy clone)
+	carrier := propagation.HeaderCarrier(http.Header{})
+	carrier.Set("X-Correlation-ID", "45aa334455667788aabbccddeeff11bb")
+
+	// Verify the header is present before injection
+	assert.Equal(t, "45aa334455667788aabbccddeeff11bb", carrier.Get("X-Correlation-ID"))
+
+	// Inject should remove the custom header when inject=false
+	propagator.Inject(ctx, carrier)
+
+	// The custom header must be gone
+	assert.Empty(t, carrier.Get("X-Correlation-ID"), "custom header should be removed in hybrid mode")
+}
+
+func TestCustomHeaderPropagator_HybridModeEndToEnd(t *testing.T) {
+	// End-to-end test for hybrid mode: extract from custom header, inject only traceparent.
+	// This simulates: incoming request with custom header → gateway → upstream with only traceparent.
+	customPropagator := NewCustomHeaderPropagator("X-Correlation-ID", false)
+	standardPropagator := propagation.TraceContext{}
+	composite := propagation.NewCompositeTextMapPropagator(customPropagator, standardPropagator)
+
+	// Simulate incoming request with custom header
+	incomingCarrier := propagation.HeaderCarrier(http.Header{})
+	incomingCarrier.Set("X-Correlation-ID", "45aa334455667788aabbccddeeff11bb")
+
+	// Extract trace context from incoming request
+	ctx := composite.Extract(context.Background(), incomingCarrier)
+	sc := trace.SpanContextFromContext(ctx)
+	assert.True(t, sc.IsValid(), "should extract valid span context from custom header")
+	assert.Equal(t, "45aa334455667788aabbccddeeff11bb", sc.TraceID().String())
+
+	// Simulate outgoing request: reverse proxy clones ALL headers from incoming request
+	outgoingCarrier := propagation.HeaderCarrier(http.Header{})
+	outgoingCarrier.Set("X-Correlation-ID", "45aa334455667788aabbccddeeff11bb") // cloned by proxy
+
+	// Inject trace context into outgoing request
+	composite.Inject(ctx, outgoingCarrier)
+
+	// Verify: only traceparent should be present, custom header should be removed
+	assert.Empty(t, outgoingCarrier.Get("X-Correlation-ID"),
+		"custom header must NOT reach upstream in hybrid mode")
+	assert.NotEmpty(t, outgoingCarrier.Get("traceparent"),
+		"traceparent must be set in hybrid mode")
+	assert.Contains(t, outgoingCarrier.Get("traceparent"), "45aa334455667788aabbccddeeff11bb",
+		"traceparent must contain the same trace ID extracted from custom header")
+}
+
 func TestCustomHeaderPropagator_Fields(t *testing.T) {
 	tests := []struct {
 		name         string
