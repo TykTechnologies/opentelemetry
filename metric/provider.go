@@ -2,17 +2,23 @@ package metric
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/otel"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
+
+// errNoExportError is a sentinel stored in lastExportError after a successful
+// export, because atomic.Value.Store panics on nil.
+var errNoExportError = errors.New("")
 
 const (
 	// NoopProvider indicates a noop provider type.
@@ -41,6 +47,8 @@ type ExportStats struct {
 type Provider interface {
 	// Shutdown executes the underlying exporter shutdown function.
 	Shutdown(context.Context) error
+	// ForceFlush immediately exports all pending metrics.
+	ForceFlush(context.Context) error
 	// Meter returns a meter with pre-configured name. It's used to create metrics.
 	Meter() otelmetric.Meter
 	// Type returns the type of the provider, it can be either "noop" or "otel".
@@ -75,8 +83,9 @@ type Provider interface {
 }
 
 type meterProvider struct {
-	meterProvider      otelmetric.MeterProvider
-	providerShutdownFn func(context.Context) error
+	meterProvider        otelmetric.MeterProvider
+	providerShutdownFn   func(context.Context) error
+	providerForceFlushFn func(context.Context) error
 
 	cfg    *config.OpenTelemetry
 	logger Logger
@@ -88,15 +97,17 @@ type meterProvider struct {
 	resources resourceConfig
 
 	// Health and stats tracking
-	healthy          atomic.Bool
-	lastExportError  atomic.Value // stores error
-	totalExports     atomic.Int64
-	successExports   atomic.Int64
-	failedExports    atomic.Int64
-	lastExportTime   atomic.Value // stores time.Time
-	lastSuccessTime  atomic.Value // stores time.Time
-	disabledMetrics  map[string]struct{}
+	healthy           atomic.Bool
+	lastExportError   atomic.Value // stores error
+	totalExports      atomic.Int64
+	successExports    atomic.Int64
+	failedExports     atomic.Int64
+	lastExportTime    atomic.Value // stores time.Time
+	lastSuccessTime   atomic.Value // stores time.Time
+	disabledMetrics   map[string]struct{}
 	disabledMetricsMu sync.RWMutex
+
+	views []sdkmetric.View
 }
 
 // NewProvider creates a new meter provider with the given options.
@@ -184,12 +195,23 @@ func NewProvider(opts ...Option) (Provider, error) {
 
 	reader := sdkmetric.NewPeriodicReader(wrappedExporter, readerOpts...)
 
+	// Build config-driven views.
+	configViews := buildViews(provider.cfg.Metrics.Views)
+
+	// Merge config-driven views with programmatic views.
+	// Config views are applied first, then programmatic views.
+	allViews := append(configViews, provider.views...)
+
 	// Build meter provider options.
 	meterProvOpts := []sdkmetric.Option{
 		sdkmetric.WithResource(resource),
 		sdkmetric.WithReader(reader),
 	}
 
+	// Add views if any are configured.
+	if len(allViews) > 0 {
+		meterProvOpts = append(meterProvOpts, sdkmetric.WithView(allViews...))
+	}
 
 	// Create the meter provider.
 	meterProv := sdkmetric.NewMeterProvider(meterProvOpts...)
@@ -197,6 +219,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 	// Set the local meter provider.
 	provider.meterProvider = meterProv
 	provider.providerShutdownFn = meterProv.Shutdown
+	provider.providerForceFlushFn = meterProv.ForceFlush
 	provider.providerType = OtelProvider
 	provider.enabled = true
 	provider.healthy.Store(true)
@@ -205,6 +228,8 @@ func NewProvider(opts ...Option) (Provider, error) {
 	otel.SetMeterProvider(meterProv)
 
 	// Set the global otel error handler.
+	// Note: This may overwrite a handler set by the trace provider. Both handlers
+	// use the same interface, so the last initialized provider's logger is used.
 	otel.SetErrorHandler(&errHandler{
 		logger: provider.logger,
 	})
@@ -212,11 +237,6 @@ func NewProvider(opts ...Option) (Provider, error) {
 	provider.logger.Info("Meter provider initialized successfully")
 
 	return provider, nil
-}
-
-// deltaTemporalitySelector returns delta temporality for all instruments.
-func deltaTemporalitySelector(sdkmetric.InstrumentKind) metricdata.Temporality {
-	return metricdata.DeltaTemporality
 }
 
 // statsExporter wraps an exporter to track export statistics.
@@ -241,7 +261,10 @@ func (e *statsExporter) Export(ctx context.Context, rm *metricdata.ResourceMetri
 	e.provider.successExports.Add(1)
 	e.provider.lastSuccessTime.Store(time.Now())
 	e.provider.healthy.Store(true)
-	e.provider.lastExportError.Store(error(nil))
+	// Note: we cannot store nil into atomic.Value (it panics), so we store a
+	// sentinel empty-message error to signal "no error". LastExportError()
+	// checks for this and returns nil.
+	e.provider.lastExportError.Store(errNoExportError)
 	return nil
 }
 
@@ -278,6 +301,13 @@ func (mp *meterProvider) Shutdown(ctx context.Context) error {
 	return mp.providerShutdownFn(ctx)
 }
 
+func (mp *meterProvider) ForceFlush(ctx context.Context) error {
+	if mp.providerForceFlushFn == nil {
+		return nil
+	}
+	return mp.providerForceFlushFn(ctx)
+}
+
 func (mp *meterProvider) Meter() otelmetric.Meter {
 	return mp.meterProvider.Meter(mp.cfg.ResourceName)
 }
@@ -302,7 +332,7 @@ func (mp *meterProvider) LastExportError() error {
 		return nil
 	}
 	if v := mp.lastExportError.Load(); v != nil {
-		if err, ok := v.(error); ok {
+		if err, ok := v.(error); ok && !errors.Is(err, errNoExportError) {
 			return err
 		}
 	}

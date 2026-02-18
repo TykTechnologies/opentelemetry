@@ -12,12 +12,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"google.golang.org/grpc/credentials"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
+
+// deltaTemporalitySelector returns delta temporality for all instruments.
+func deltaTemporalitySelector(sdkmetric.InstrumentKind) metricdata.Temporality {
+	return metricdata.DeltaTemporality
+}
 
 func exporterFactory(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.Exporter, error) {
 	switch cfg.Exporter {
@@ -45,6 +52,11 @@ func newGRPCExporter(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.
 			MaxInterval:     time.Duration(cfg.Metrics.Retry.MaxInterval) * time.Millisecond,
 			MaxElapsedTime:  time.Duration(cfg.Metrics.Retry.MaxElapsedTime) * time.Millisecond,
 		}))
+	}
+
+	// Apply temporality preference.
+	if cfg.Metrics.Temporality == config.TEMPORALITY_DELTA {
+		clientOptions = append(clientOptions, otlpmetricgrpc.WithTemporalitySelector(deltaTemporalitySelector))
 	}
 
 	isTLSDisabled := !cfg.TLS.Enable
@@ -84,6 +96,11 @@ func newHTTPExporter(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.
 			MaxInterval:     time.Duration(cfg.Metrics.Retry.MaxInterval) * time.Millisecond,
 			MaxElapsedTime:  time.Duration(cfg.Metrics.Retry.MaxElapsedTime) * time.Millisecond,
 		}))
+	}
+
+	// Apply temporality preference.
+	if cfg.Metrics.Temporality == config.TEMPORALITY_DELTA {
+		clientOptions = append(clientOptions, otlpmetrichttp.WithTemporalitySelector(deltaTemporalitySelector))
 	}
 
 	isTLSDisabled := !cfg.TLS.Enable
@@ -180,7 +197,7 @@ func handleTLSVersion(cfg *config.TLS) (minVersion, maxVersion int, err error) {
 	if _, ok := validVersions[cfg.MaxVersion]; ok {
 		maxVersion = validVersions[cfg.MaxVersion]
 	} else {
-		err = errors.New("Invalid MaxVersion specified. Please specify a valid TLS version: 1.0, 1.1, 1.2, or 1.3")
+		err = errors.New("invalid MaxVersion specified, please specify a valid TLS version: 1.0, 1.1, 1.2, or 1.3")
 		return
 	}
 
@@ -191,7 +208,7 @@ func handleTLSVersion(cfg *config.TLS) (minVersion, maxVersion int, err error) {
 	if _, ok := validVersions[cfg.MinVersion]; ok {
 		minVersion = validVersions[cfg.MinVersion]
 	} else {
-		err = errors.New("Invalid MinVersion specified. Please specify a valid TLS version: 1.0, 1.1, 1.2, or 1.3")
+		err = errors.New("invalid MinVersion specified, please specify a valid TLS version: 1.0, 1.1, 1.2, or 1.3")
 		return
 	}
 

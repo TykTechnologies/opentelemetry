@@ -79,6 +79,10 @@ type MetricsConfig struct {
 
 	// Retry configuration for exporter failures.
 	Retry MetricsRetryConfig `json:"retry"`
+
+	// Views defines a list of metric views for controlling aggregation,
+	// attribute filtering, and metric transformation at export time.
+	Views []MetricViewConfig `json:"views"`
 }
 
 // MetricsRetryConfig configures retry behavior for metric export failures.
@@ -96,6 +100,28 @@ type MetricsRetryConfig struct {
 	// After this duration, the export is abandoned.
 	// Defaults to 60000 (1 minute).
 	MaxElapsedTime int `json:"max_elapsed_time"`
+}
+
+// MetricViewConfig defines a single metric view that matches instruments
+// by name and applies transformations to the metric stream.
+type MetricViewConfig struct {
+	// InstrumentName is the name of the instrument to match.
+	// Supports wildcard "*" to match all instruments.
+	InstrumentName string `json:"instrument_name"`
+	// InstrumentType optionally restricts the match to a specific instrument kind.
+	// Valid values: "counter", "histogram", "gauge", "updowncounter", "".
+	InstrumentType string `json:"instrument_type,omitempty"`
+	// DropAttributes is a list of attribute keys to remove from the metric stream.
+	DropAttributes []string `json:"drop_attributes,omitempty"`
+	// AllowAttributes keeps only the specified attribute keys. Takes precedence over DropAttributes.
+	AllowAttributes []string `json:"allow_attributes,omitempty"`
+	// HistogramBuckets overrides the default histogram bucket boundaries.
+	HistogramBuckets []float64 `json:"histogram_buckets,omitempty"`
+	// Aggregation overrides the default aggregation type.
+	// Valid values: "default", "sum", "last_value", "drop", "explicit_bucket_histogram".
+	Aggregation string `json:"aggregation,omitempty"`
+	// StreamName renames the metric in the exported data.
+	StreamName string `json:"stream_name,omitempty"`
 }
 
 type TLS struct {
