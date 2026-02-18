@@ -5,6 +5,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
+	noopmetric "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -40,6 +41,9 @@ func NewHTTPHandler(name string, handler http.Handler, tp Provider, attr ...Attr
 	opts := []otelhttp.Option{
 		otelhttp.WithSpanNameFormatter(httpSpanNameFormatter),
 		otelhttp.WithPropagators(otel.GetTextMapPropagator()),
+		// Suppress otelhttp's auto-emitted metrics (http_server_duration_milliseconds etc.)
+		// to avoid duplicates — Tyk owns its own metric instrumentation.
+		otelhttp.WithMeterProvider(noopmetric.NewMeterProvider()),
 	}
 
 	opts = append(opts, otelhttp.WithSpanOptions(
