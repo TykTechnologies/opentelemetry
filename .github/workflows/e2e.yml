@@ -15,13 +15,13 @@ jobs:
         with:
           fetch-depth: 2
       - name: Install Task
-        uses: arduino/setup-task@v1
+        uses: arduino/setup-task@v2
         with:
           version: 3
       - name: Setup Golang
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.6
+          go-version: 1.24.0
       - name: Setup e2e
         run: task e2e-setup
       - name: Run e2e tests
@@ -39,7 +39,7 @@ jobs:
         with:
           fetch-depth: 2
       - name: Install Task
-        uses: arduino/setup-task@v1
+        uses: arduino/setup-task@v2
         with:
           version: 3
       - name: Setup Golang
