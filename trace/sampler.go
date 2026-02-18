@@ -3,8 +3,9 @@ package trace
 import (
 	"strings"
 
-	"github.com/TykTechnologies/opentelemetry/config"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
 
 func getSampler(samplingType string, samplingRate float64, parentBased bool) sdktrace.Sampler {

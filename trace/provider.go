@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/otel"
-	noopMetricProvider "go.opentelemetry.io/otel/metric/noop"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
 
 // Provider is the interface that wraps the basic methods of a tracer provider.
@@ -140,8 +140,6 @@ func NewProvider(opts ...Option) (Provider, error) {
 
 	// set global otel tracer provider
 	otel.SetTracerProvider(tracerProvider)
-
-	otel.SetMeterProvider(noopMetricProvider.NewMeterProvider())
 
 	// set the global otel context propagator
 	otel.SetTextMapPropagator(propagator)

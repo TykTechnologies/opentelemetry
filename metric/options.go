@@ -3,8 +3,10 @@ package metric
 import (
 	"context"
 
-	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
 
 // Attribute is an alias for OpenTelemetry attribute.KeyValue.
@@ -174,6 +176,17 @@ func WithCustomResourceAttributes(attrs ...Attribute) Option {
 	return &opts{
 		fn: func(mp *meterProvider) {
 			mp.resources.customAttrs = attrs
+		},
+	}
+}
+
+// WithViews adds OTel SDK Views to the meter provider for controlling
+// metric aggregation, attribute filtering, and stream transformation.
+// Views are applied in order; the first matching view wins.
+func WithViews(views ...sdkmetric.View) Option {
+	return &opts{
+		fn: func(mp *meterProvider) {
+			mp.views = append(mp.views, views...)
 		},
 	}
 }

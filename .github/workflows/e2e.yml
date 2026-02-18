@@ -15,13 +15,13 @@ jobs:
         with:
           fetch-depth: 2
       - name: Install Task
-        uses: arduino/setup-task@v1
+        uses: arduino/setup-task@v2
         with:
           version: 3
       - name: Setup Golang
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.6
+          go-version: 1.24.0
       - name: Setup e2e
         run: task e2e-setup
       - name: Run e2e tests
@@ -29,3 +29,22 @@ jobs:
       - name: Stop e2e
         if: always()
         run: task e2e-stop
+
+  e2e-metrics:
+    name: e2e-metrics
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3
+      - name: Setup Golang
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.24.0
+      - name: Run e2e metrics tests
+        run: task e2e-metrics

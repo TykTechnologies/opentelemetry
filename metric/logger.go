@@ -10,9 +10,9 @@ type Logger interface {
 
 type noopLogger struct{}
 
-func (n *noopLogger) Error(args ...interface{}) {}
+func (n *noopLogger) Error(_ ...interface{}) {}
 
-func (n *noopLogger) Info(args ...interface{}) {}
+func (n *noopLogger) Info(_ ...interface{}) {}
 
 // errHandler implements otel.ErrorHandler for handling OpenTelemetry errors.
 type errHandler struct {

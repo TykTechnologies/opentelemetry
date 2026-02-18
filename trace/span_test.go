@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
 
 func TestSpanFromContext(t *testing.T) {

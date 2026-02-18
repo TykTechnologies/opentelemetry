@@ -94,5 +94,13 @@ func (u *UpDownCounter) Enabled() bool {
 	return u != nil && u.enabled
 }
 
-// DefaultLatencyBuckets provides sensible default bucket boundaries for latency histograms in milliseconds.
+// DefaultLatencyBuckets provides default bucket boundaries for latency histograms
+// in milliseconds. These buckets are suitable for API gateway latency measurement
+// where most requests complete between 1ms and 10s.
+// For OTel semantic convention compliance (duration in seconds), use DefaultLatencyBucketsSeconds.
 var DefaultLatencyBuckets = []float64{1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000}
+
+// DefaultLatencyBucketsSeconds provides default bucket boundaries for latency histograms
+// in seconds, following OTel HTTP semantic conventions where duration is measured in seconds.
+// These are equivalent to DefaultLatencyBuckets converted from milliseconds to seconds.
+var DefaultLatencyBucketsSeconds = []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0}

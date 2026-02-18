@@ -13,6 +13,13 @@ tasks:
     cmds:
       - go test -v -race -vet=off ./...
 
+  lint:
+    desc: Run linters (golangci-lint)
+    cmds:
+      - go mod tidy
+      - go vet ./...
+      - golangci-lint run --new-from-rev=origin/main --fix ./...
+
   e2e-setup:
     desc: Install e2e test - start e2e/basic app, tracetest and otel-collector
     deps:
@@ -41,3 +48,8 @@ tasks:
       - task: e2e-setup
       - task: e2e-test
       - task: e2e-stop
+
+  e2e-metrics:
+    desc: Run e2e metrics tests (docker compose lifecycle managed by test)
+    cmds:
+      - E2E_METRICS=1 go test -v -timeout 120s ./e2e/metrics/...
