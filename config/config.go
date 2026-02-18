@@ -44,6 +44,18 @@ type OpenTelemetry struct {
 	// from this header (priority) or standard headers (fallback), and propagate using both
 	// custom and standard headers.
 	// Example: "X-Correlation-ID", "X-Request-ID", "X-Trace-ID"
+	//
+	// The header value should be a valid OpenTelemetry Trace ID: a 32-character (16-byte)
+	// lowercase hex string with at least one non-zero byte
+	// (e.g. "0102030405060708090a0b0c0d0e0f10"). UUIDs with dashes are also accepted
+	// (e.g. "550e8400-e29b-41d4-a716-446655440000") — dashes are removed automatically.
+	// See: https://opentelemetry.io/docs/specs/otel/trace/api/
+	//
+	// If the value contains non-hex characters, those characters will be stripped and the
+	// remaining hex characters will be zero-padded to 32 characters. This means arbitrary
+	// strings like "my-request-id" will NOT produce a predictable trace ID. To ensure
+	// trace ID consistency between the custom header and the reported trace, always send
+	// a valid OpenTelemetry Trace ID or UUID.
 	CustomTraceHeader string `json:"custom_trace_header"`
 	// TLS configuration for the exporter.
 	TLS TLS `json:"tls"`

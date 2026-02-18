@@ -3,6 +3,7 @@ package trace
 import (
 	"context"
 	"encoding/hex"
+	"net/http"
 	"strings"
 
 	"go.opentelemetry.io/otel/propagation"
@@ -33,6 +34,13 @@ func NewCustomHeaderPropagator(traceHeader string, inject bool) *CustomHeaderPro
 // and to ensure log correlation works across services.
 func (p *CustomHeaderPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	if !p.inject {
+		// In hybrid mode, the custom header may already be present in the carrier
+		// because the reverse proxy clones all incoming request headers to the
+		// outgoing request. We must actively remove it to ensure only standard
+		// headers (e.g. traceparent) are sent upstream.
+		if hc, ok := carrier.(propagation.HeaderCarrier); ok {
+			http.Header(hc).Del(p.traceHeader)
+		}
 		return
 	}
 
@@ -40,13 +48,6 @@ func (p *CustomHeaderPropagator) Inject(ctx context.Context, carrier propagation
 	if originalValue, ok := ctx.Value(customHeaderContextKey{}).(string); ok && originalValue != "" {
 		// Inject the original value unchanged to preserve correlation IDs for logging
 		carrier.Set(p.traceHeader, originalValue)
-		return
-	}
-
-	// If no original value, use the normalised trace ID
-	sc := trace.SpanContextFromContext(ctx)
-	if sc.IsValid() {
-		carrier.Set(p.traceHeader, sc.TraceID().String())
 	}
 }
 
