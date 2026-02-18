@@ -74,5 +74,5 @@ var httpSpanNameFormatter = func(operation string, r *http.Request) string {
 // NewHTTPTransport wraps the provided http.RoundTripper with one that
 // starts a span and injects the span context into the outbound request headers.
 func NewHTTPTransport(base http.RoundTripper) http.RoundTripper {
-	return otelhttp.NewTransport(base)
+	return otelhttp.NewTransport(base, otelhttp.WithMeterProvider(noopmetric.NewMeterProvider()))
 }
