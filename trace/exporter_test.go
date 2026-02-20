@@ -8,10 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/TykTechnologies/opentelemetry/config"
-
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
 
 func Test_NewGRPCClient(t *testing.T) {

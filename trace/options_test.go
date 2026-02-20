@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
 
 func Test_WithLogger(t *testing.T) {

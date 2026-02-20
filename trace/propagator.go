@@ -3,9 +3,10 @@ package trace
 import (
 	"fmt"
 
-	"github.com/TykTechnologies/opentelemetry/config"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/propagation"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
 
 func propagatorFactory(cfg *config.OpenTelemetry) (propagation.TextMapPropagator, error) {

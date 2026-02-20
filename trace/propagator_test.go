@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/TykTechnologies/opentelemetry/config"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/propagation"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
 
 func Test_PropagatorFactory(t *testing.T) {

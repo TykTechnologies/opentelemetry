@@ -3,8 +3,9 @@ package trace
 import (
 	"time"
 
-	"github.com/TykTechnologies/opentelemetry/config"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
 
 func spanProcessorFactory(spanProcessorType string, cfg config.SpanBatchConfig, exporter sdktrace.SpanExporter) sdktrace.SpanProcessor {

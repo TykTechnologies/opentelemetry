@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/TykTechnologies/opentelemetry/config"
-	"github.com/stretchr/testify/assert"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestGetSampler(t *testing.T) {

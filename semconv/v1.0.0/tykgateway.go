@@ -1,8 +1,9 @@
 package semconv
 
 import (
-	"github.com/TykTechnologies/opentelemetry/trace"
 	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/TykTechnologies/opentelemetry/trace"
 )
 
 const (

@@ -1,0 +1,25 @@
+version: '3'
+services:
+  metrics-app:
+    build:
+      context: ../../
+      dockerfile: ./e2e/metrics/Dockerfile
+    ports:
+      - "8081:8081"
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.80.0
+    command: ["--config", "/otel-local-config.yml"]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
+    volumes:
+      - ./collector.config.yml:/otel-local-config.yml
+
+networks:
+  default:
+    name: e2e-metrics

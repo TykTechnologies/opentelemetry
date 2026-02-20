@@ -10,10 +10,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/TykTechnologies/opentelemetry/config"
 	semconv "github.com/TykTechnologies/opentelemetry/semconv/v1.0.0"
 	"github.com/TykTechnologies/opentelemetry/trace"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
