@@ -163,41 +163,6 @@ func TestNewProvider_NewUpDownCounter_Disabled(t *testing.T) {
 	counter.Add(context.Background(), 1)
 }
 
-func TestNewProvider_DisabledMetrics(t *testing.T) {
-	metricsEnabled := true
-	cfg := &config.OpenTelemetry{
-		Enabled:  true,
-		Exporter: "grpc",
-		Endpoint: "localhost:4317",
-		Metrics: config.MetricsConfig{
-			Enabled:         &metricsEnabled,
-			DisabledMetrics: []string{"test.disabled.counter"},
-		},
-	}
-	provider, err := NewProvider(WithContext(context.Background()), WithConfig(cfg))
-	// Provider creation may fail due to no collector, but that's ok - check disabled metrics map
-	if err != nil {
-		// Even on error, the provider should work for disabled metric checks
-		return
-	}
-	assert.True(t, provider.IsMetricDisabled("test.disabled.counter"))
-	assert.False(t, provider.IsMetricDisabled("test.enabled.counter"))
-}
-
-func TestNewProvider_IsMetricDisabled(t *testing.T) {
-	cfg := &config.OpenTelemetry{
-		Enabled: false,
-		Metrics: config.MetricsConfig{
-			DisabledMetrics: []string{"metric.a", "metric.b"},
-		},
-	}
-	provider, err := NewProvider(WithContext(context.Background()), WithConfig(cfg))
-	assert.NoError(t, err)
-	assert.True(t, provider.IsMetricDisabled("metric.a"))
-	assert.True(t, provider.IsMetricDisabled("metric.b"))
-	assert.False(t, provider.IsMetricDisabled("metric.c"))
-}
-
 func TestNewProvider_NoopHealthy(t *testing.T) {
 	cfg := &config.OpenTelemetry{Enabled: false}
 	provider, err := NewProvider(WithContext(context.Background()), WithConfig(cfg))

@@ -68,7 +68,7 @@ type OpenTelemetry struct {
 // MetricsConfig holds the configuration for OpenTelemetry metrics.
 type MetricsConfig struct {
 	// A flag that can be used to enable or disable metrics export.
-	// If not set, defaults to the parent OpenTelemetry.Enabled value.
+	// Must be explicitly set to true to enable metrics. If omitted (nil), metrics are disabled.
 	Enabled *bool `json:"enabled,omitempty"`
 	// The interval in seconds at which metrics are exported.
 	// Defaults to 60 seconds.
@@ -84,17 +84,8 @@ type MetricsConfig struct {
 	// Defaults to 30 seconds.
 	ShutdownTimeout int `json:"shutdown_timeout"`
 
-	// DisabledMetrics is a list of metric names that should not be collected.
-	// Use this to selectively disable expensive or unwanted metrics in production.
-	// Example: ["tyk.upstream.latency"]
-	DisabledMetrics []string `json:"disabled_metrics"`
-
 	// Retry configuration for exporter failures.
 	Retry MetricsRetryConfig `json:"retry"`
-
-	// Views defines a list of metric views for controlling aggregation,
-	// attribute filtering, and metric transformation at export time.
-	Views []MetricViewConfig `json:"views"`
 }
 
 // MetricsRetryConfig configures retry behavior for metric export failures.
@@ -112,28 +103,6 @@ type MetricsRetryConfig struct {
 	// After this duration, the export is abandoned.
 	// Defaults to 60000 (1 minute).
 	MaxElapsedTime int `json:"max_elapsed_time"`
-}
-
-// MetricViewConfig defines a single metric view that matches instruments
-// by name and applies transformations to the metric stream.
-type MetricViewConfig struct {
-	// InstrumentName is the name of the instrument to match.
-	// Supports wildcard "*" to match all instruments.
-	InstrumentName string `json:"instrument_name"`
-	// InstrumentType optionally restricts the match to a specific instrument kind.
-	// Valid values: "counter", "histogram", "gauge", "updowncounter", "".
-	InstrumentType string `json:"instrument_type,omitempty"`
-	// DropAttributes is a list of attribute keys to remove from the metric stream.
-	DropAttributes []string `json:"drop_attributes,omitempty"`
-	// AllowAttributes keeps only the specified attribute keys. Takes precedence over DropAttributes.
-	AllowAttributes []string `json:"allow_attributes,omitempty"`
-	// HistogramBuckets overrides the default histogram bucket boundaries.
-	HistogramBuckets []float64 `json:"histogram_buckets,omitempty"`
-	// Aggregation overrides the default aggregation type.
-	// Valid values: "default", "sum", "last_value", "drop", "explicit_bucket_histogram".
-	Aggregation string `json:"aggregation,omitempty"`
-	// StreamName renames the metric in the exported data.
-	StreamName string `json:"stream_name,omitempty"`
 }
 
 type TLS struct {
@@ -254,11 +223,9 @@ func (c *OpenTelemetry) SetDefaults() {
 		c.Sampling.Rate = 0.5
 	}
 
-	// Set metrics defaults
-	if c.Metrics.Enabled == nil {
-		// Default to parent Enabled value
-		c.Metrics.Enabled = &c.Enabled
-	}
+	// Set metrics defaults.
+	// Note: Metrics.Enabled has no default — if omitted (nil), metrics are disabled.
+	// Consumers must explicitly set metrics.enabled=true to enable metrics.
 
 	if c.Metrics.ExportInterval == 0 {
 		c.Metrics.ExportInterval = 60

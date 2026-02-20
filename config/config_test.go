@@ -12,9 +12,10 @@ func ptr[T any](v T) *T {
 }
 
 // expectedMetricsDefaults returns the MetricsConfig with all defaults applied.
+// Note: Enabled is nil (metrics disabled) because it must be explicitly set.
 func expectedMetricsDefaults() MetricsConfig {
 	return MetricsConfig{
-		Enabled:         ptr(true),
+		Enabled:         nil,
 		ExportInterval:  60,
 		Temporality:     TEMPORALITY_CUMULATIVE,
 		ShutdownTimeout: 30,

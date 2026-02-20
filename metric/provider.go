@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -78,8 +77,6 @@ type Provider interface {
 	LastExportError() error
 	// GetExportStats returns statistics about metric exports.
 	GetExportStats() ExportStats
-	// IsMetricDisabled returns whether a metric is disabled by configuration.
-	IsMetricDisabled(name string) bool
 }
 
 type meterProvider struct {
@@ -97,17 +94,13 @@ type meterProvider struct {
 	resources resourceConfig
 
 	// Health and stats tracking
-	healthy           atomic.Bool
-	lastExportError   atomic.Value // stores error
-	totalExports      atomic.Int64
-	successExports    atomic.Int64
-	failedExports     atomic.Int64
-	lastExportTime    atomic.Value // stores time.Time
-	lastSuccessTime   atomic.Value // stores time.Time
-	disabledMetrics   map[string]struct{}
-	disabledMetricsMu sync.RWMutex
-
-	views []sdkmetric.View
+	healthy         atomic.Bool
+	lastExportError atomic.Value // stores error
+	totalExports    atomic.Int64
+	successExports  atomic.Int64
+	failedExports   atomic.Int64
+	lastExportTime  atomic.Value // stores time.Time
+	lastSuccessTime atomic.Value // stores time.Time
 }
 
 // NewProvider creates a new meter provider with the given options.
@@ -143,7 +136,6 @@ func NewProvider(opts ...Option) (Provider, error) {
 		ctx:                context.Background(),
 		providerType:       NoopProvider,
 		enabled:            false,
-		disabledMetrics:    make(map[string]struct{}),
 	}
 
 	// Apply the given options.
@@ -153,11 +145,6 @@ func NewProvider(opts ...Option) (Provider, error) {
 
 	// Set the config defaults - this does not override the config values.
 	provider.cfg.SetDefaults()
-
-	// Build disabled metrics map for O(1) lookups.
-	for _, name := range provider.cfg.Metrics.DisabledMetrics {
-		provider.disabledMetrics[name] = struct{}{}
-	}
 
 	// Check if metrics are enabled.
 	metricsEnabled := provider.cfg.Metrics.Enabled != nil && *provider.cfg.Metrics.Enabled
@@ -195,26 +182,11 @@ func NewProvider(opts ...Option) (Provider, error) {
 
 	reader := sdkmetric.NewPeriodicReader(wrappedExporter, readerOpts...)
 
-	// Build config-driven views.
-	configViews := buildViews(provider.cfg.Metrics.Views)
-
-	// Merge config-driven views with programmatic views.
-	// Config views are applied first, then programmatic views.
-	allViews := append(configViews, provider.views...)
-
-	// Build meter provider options.
-	meterProvOpts := []sdkmetric.Option{
+	// Create the meter provider.
+	meterProv := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(resource),
 		sdkmetric.WithReader(reader),
-	}
-
-	// Add views if any are configured.
-	if len(allViews) > 0 {
-		meterProvOpts = append(meterProvOpts, sdkmetric.WithView(allViews...))
-	}
-
-	// Create the meter provider.
-	meterProv := sdkmetric.NewMeterProvider(meterProvOpts...)
+	)
 
 	// Set the local meter provider.
 	provider.meterProvider = meterProv
@@ -361,15 +333,8 @@ func (mp *meterProvider) GetExportStats() ExportStats {
 	return stats
 }
 
-func (mp *meterProvider) IsMetricDisabled(name string) bool {
-	mp.disabledMetricsMu.RLock()
-	defer mp.disabledMetricsMu.RUnlock()
-	_, disabled := mp.disabledMetrics[name]
-	return disabled
-}
-
 func (mp *meterProvider) NewCounter(name, description, unit string) (*Counter, error) {
-	if !mp.enabled || mp.IsMetricDisabled(name) {
+	if !mp.enabled {
 		return &Counter{enabled: false}, nil
 	}
 
@@ -389,7 +354,7 @@ func (mp *meterProvider) NewCounter(name, description, unit string) (*Counter, e
 }
 
 func (mp *meterProvider) NewHistogram(name, description, unit string, buckets []float64) (*Histogram, error) {
-	if !mp.enabled || mp.IsMetricDisabled(name) {
+	if !mp.enabled {
 		return &Histogram{enabled: false}, nil
 	}
 
@@ -414,7 +379,7 @@ func (mp *meterProvider) NewHistogram(name, description, unit string, buckets []
 }
 
 func (mp *meterProvider) NewGauge(name, description, unit string) (*Gauge, error) {
-	if !mp.enabled || mp.IsMetricDisabled(name) {
+	if !mp.enabled {
 		return &Gauge{enabled: false}, nil
 	}
 
@@ -434,7 +399,7 @@ func (mp *meterProvider) NewGauge(name, description, unit string) (*Gauge, error
 }
 
 func (mp *meterProvider) NewUpDownCounter(name, description, unit string) (*UpDownCounter, error) {
-	if !mp.enabled || mp.IsMetricDisabled(name) {
+	if !mp.enabled {
 		return &UpDownCounter{enabled: false}, nil
 	}
 
