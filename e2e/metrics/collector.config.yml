@@ -1,0 +1,22 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+exporters:
+  logging:
+    loglevel: debug
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+
+processors:
+  batch:
+    timeout: 100ms
+
+service:
+  pipelines:
+    metrics/1:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging, prometheus]

@@ -6,20 +6,19 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"os"
-
 	"net"
 	"net/url"
+	"os"
 	"strings"
 	"time"
-
-	"github.com/TykTechnologies/opentelemetry/config"
-	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"google.golang.org/grpc/credentials"
+
+	"github.com/TykTechnologies/opentelemetry/config"
 )
 
 func exporterFactory(ctx context.Context, cfg *config.OpenTelemetry) (sdktrace.SpanExporter, error) {

@@ -6,6 +6,28 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+// ptr returns a pointer to the given value.
+func ptr[T any](v T) *T {
+	return &v
+}
+
+// expectedMetricsDefaults returns the MetricsConfig with all defaults applied.
+// Note: Enabled is nil (metrics disabled) because it must be explicitly set.
+func expectedMetricsDefaults() MetricsConfig {
+	return MetricsConfig{
+		Enabled:         nil,
+		ExportInterval:  60,
+		Temporality:     TEMPORALITY_CUMULATIVE,
+		ShutdownTimeout: 30,
+		Retry: MetricsRetryConfig{
+			Enabled:         ptr(true),
+			InitialInterval: 5000,
+			MaxInterval:     30000,
+			MaxElapsedTime:  60000,
+		},
+	}
+}
+
 func Test_SetDefault(t *testing.T) {
 	tcs := []struct {
 		name        string
@@ -48,6 +70,7 @@ func Test_SetDefault(t *testing.T) {
 					Type: TRACEIDRATIOBASED,
 					Rate: 0.8,
 				},
+				Metrics: expectedMetricsDefaults(),
 			},
 		},
 		{
@@ -66,6 +89,7 @@ func Test_SetDefault(t *testing.T) {
 				Sampling: Sampling{
 					Type: ALWAYSON,
 				},
+				Metrics: expectedMetricsDefaults(),
 			},
 		},
 		{
@@ -88,6 +112,7 @@ func Test_SetDefault(t *testing.T) {
 					Type: TRACEIDRATIOBASED,
 					Rate: 0.5,
 				},
+				Metrics: expectedMetricsDefaults(),
 			},
 		},
 	}

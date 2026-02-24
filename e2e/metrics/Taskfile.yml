@@ -1,0 +1,14 @@
+version: '3'
+
+tasks:
+  build:
+    cmds:
+      - go build -o e2e-metrics
+  run:
+    cmds:
+      - task: build
+      - cmd: ./e2e-metrics
+  test:
+    desc: Run automated e2e metrics tests (requires Docker)
+    cmds:
+      - E2E_METRICS=1 go test -v -timeout 120s ./...
