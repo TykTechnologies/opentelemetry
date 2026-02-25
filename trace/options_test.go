@@ -47,9 +47,11 @@ func Test_WithContext(t *testing.T) {
 
 func Test_WithConfig(t *testing.T) {
 	cfg := config.OpenTelemetry{
-		Exporter: "http",
-		Enabled:  true,
-		Endpoint: "localhost:4317",
+		Enabled: true,
+		ExporterConfig: config.ExporterConfig{
+			Exporter: "http",
+			Endpoint: "localhost:4317",
+		},
 	}
 	tp := &traceProvider{}
 

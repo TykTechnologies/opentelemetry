@@ -23,20 +23,19 @@ func main() {
 	defer cancel()
 
 	metricsEnabled := true
-	cfg := config.OpenTelemetry{
-		Enabled:           true,
-		Exporter:          "grpc",
-		Endpoint:          "otel-collector:4317",
-		ConnectionTimeout: 10,
-		ResourceName:      "e2e-metrics",
-		TLS: config.TLS{
-			Enable: false,
+	cfg := config.MetricsConfig{
+		Enabled: &metricsEnabled,
+		ExporterConfig: config.ExporterConfig{
+			Exporter:          "grpc",
+			Endpoint:          "otel-collector:4317",
+			ConnectionTimeout: 10,
+			ResourceName:      "e2e-metrics",
+			TLS: config.TLS{
+				Enable: false,
+			},
 		},
-		Metrics: config.MetricsConfig{
-			Enabled:        &metricsEnabled,
-			ExportInterval: 5, // short interval for fast e2e feedback
-			Temporality:    "cumulative",
-		},
+		ExportInterval: 5, // short interval for fast e2e feedback
+		Temporality:    "cumulative",
 	}
 
 	log.Println("Initializing OpenTelemetry metrics at e2e-metrics:", cfg.Endpoint)
@@ -141,7 +140,7 @@ func main() {
 	}()
 
 	<-ctx.Done()
-	newCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Duration(cfg.ConnectionTimeout)*time.Second)
+	newCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Duration(cfg.ShutdownTimeout)*time.Second)
 	defer shutdownCancel()
 
 	// Force flush before shutdown to ensure all pending metrics are exported.

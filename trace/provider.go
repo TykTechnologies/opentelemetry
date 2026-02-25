@@ -51,9 +51,11 @@ type traceProvider struct {
 		provider, err := trace.NewProvider(
 			trace.WithContext(context.Background()),
 			trace.WithConfig(&config.OpenTelemetry{
-				Enabled:  true,
-				Exporter: "grpc",
-				Endpoint: "localhost:4317",
+				Enabled: true,
+				ExporterConfig: config.ExporterConfig{
+					Exporter: "grpc",
+					Endpoint: "localhost:4317",
+				},
 			}),
 			trace.WithLogger(logrus.New().WithField("component", "tyk")),
 		)

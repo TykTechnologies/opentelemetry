@@ -22,13 +22,15 @@ func main() {
 	defer cancel()
 
 	cfg := config.OpenTelemetry{
-		Enabled:           true,
-		Exporter:          "grpc",
-		Endpoint:          "otel-collector:4317",
-		ConnectionTimeout: 10,
-		ResourceName:      "e2e-basic",
-		TLS: config.TLS{
-			Enable: false,
+		Enabled: true,
+		ExporterConfig: config.ExporterConfig{
+			Exporter:          "grpc",
+			Endpoint:          "otel-collector:4317",
+			ConnectionTimeout: 10,
+			ResourceName:      "e2e-basic",
+			TLS: config.TLS{
+				Enable: false,
+			},
 		},
 	}
 

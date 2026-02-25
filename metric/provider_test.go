@@ -9,9 +9,13 @@ import (
 	"github.com/TykTechnologies/opentelemetry/config"
 )
 
+func ptr[T any](v T) *T {
+	return &v
+}
+
 func TestNewProvider_Disabled(t *testing.T) {
-	cfg := &config.OpenTelemetry{
-		Enabled: false,
+	cfg := &config.MetricsConfig{
+		Enabled: ptr(false),
 	}
 
 	provider, err := NewProvider(
@@ -26,15 +30,27 @@ func TestNewProvider_Disabled(t *testing.T) {
 }
 
 func TestNewProvider_MetricsDisabled(t *testing.T) {
-	metricsEnabled := false
-	cfg := &config.OpenTelemetry{
-		Enabled:  true,
-		Exporter: "grpc",
-		Endpoint: "localhost:4317",
-		Metrics: config.MetricsConfig{
-			Enabled: &metricsEnabled,
+	cfg := &config.MetricsConfig{
+		Enabled: ptr(false),
+		ExporterConfig: config.ExporterConfig{
+			Exporter: "grpc",
+			Endpoint: "localhost:4317",
 		},
 	}
+
+	provider, err := NewProvider(
+		WithContext(context.Background()),
+		WithConfig(cfg),
+	)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, provider)
+	assert.Equal(t, NoopProvider, provider.Type())
+	assert.False(t, provider.Enabled())
+}
+
+func TestNewProvider_NilEnabled(t *testing.T) {
+	cfg := &config.MetricsConfig{}
 
 	provider, err := NewProvider(
 		WithContext(context.Background()),
@@ -76,8 +92,8 @@ func TestHistogram_Record_NoopWhenDisabled(t *testing.T) {
 }
 
 func TestNewProvider_NewCounter_Disabled(t *testing.T) {
-	cfg := &config.OpenTelemetry{
-		Enabled: false,
+	cfg := &config.MetricsConfig{
+		Enabled: ptr(false),
 	}
 
 	provider, err := NewProvider(
@@ -97,8 +113,8 @@ func TestNewProvider_NewCounter_Disabled(t *testing.T) {
 }
 
 func TestNewProvider_NewHistogram_Disabled(t *testing.T) {
-	cfg := &config.OpenTelemetry{
-		Enabled: false,
+	cfg := &config.MetricsConfig{
+		Enabled: ptr(false),
 	}
 
 	provider, err := NewProvider(
@@ -142,7 +158,7 @@ func TestUpDownCounter_Add_NoopWhenDisabled(t *testing.T) {
 }
 
 func TestNewProvider_NewGauge_Disabled(t *testing.T) {
-	cfg := &config.OpenTelemetry{Enabled: false}
+	cfg := &config.MetricsConfig{Enabled: ptr(false)}
 	provider, err := NewProvider(WithContext(context.Background()), WithConfig(cfg))
 	assert.NoError(t, err)
 	gauge, err := provider.NewGauge("test.gauge", "A test gauge", "1")
@@ -153,7 +169,7 @@ func TestNewProvider_NewGauge_Disabled(t *testing.T) {
 }
 
 func TestNewProvider_NewUpDownCounter_Disabled(t *testing.T) {
-	cfg := &config.OpenTelemetry{Enabled: false}
+	cfg := &config.MetricsConfig{Enabled: ptr(false)}
 	provider, err := NewProvider(WithContext(context.Background()), WithConfig(cfg))
 	assert.NoError(t, err)
 	counter, err := provider.NewUpDownCounter("test.updown", "A test updown counter", "1")
@@ -164,14 +180,14 @@ func TestNewProvider_NewUpDownCounter_Disabled(t *testing.T) {
 }
 
 func TestNewProvider_NoopHealthy(t *testing.T) {
-	cfg := &config.OpenTelemetry{Enabled: false}
+	cfg := &config.MetricsConfig{Enabled: ptr(false)}
 	provider, err := NewProvider(WithContext(context.Background()), WithConfig(cfg))
 	assert.NoError(t, err)
 	assert.True(t, provider.Healthy())
 }
 
 func TestNewProvider_NoopExportStats(t *testing.T) {
-	cfg := &config.OpenTelemetry{Enabled: false}
+	cfg := &config.MetricsConfig{Enabled: ptr(false)}
 	provider, err := NewProvider(WithContext(context.Background()), WithConfig(cfg))
 	assert.NoError(t, err)
 	stats := provider.GetExportStats()
@@ -181,21 +197,21 @@ func TestNewProvider_NoopExportStats(t *testing.T) {
 }
 
 func TestNewProvider_NoopLastExportError(t *testing.T) {
-	cfg := &config.OpenTelemetry{Enabled: false}
+	cfg := &config.MetricsConfig{Enabled: ptr(false)}
 	provider, err := NewProvider(WithContext(context.Background()), WithConfig(cfg))
 	assert.NoError(t, err)
 	assert.Nil(t, provider.LastExportError())
 }
 
 func TestNewProvider_NoopShutdown(t *testing.T) {
-	cfg := &config.OpenTelemetry{Enabled: false}
+	cfg := &config.MetricsConfig{Enabled: ptr(false)}
 	provider, err := NewProvider(WithContext(context.Background()), WithConfig(cfg))
 	assert.NoError(t, err)
 	assert.NoError(t, provider.Shutdown(context.Background()))
 }
 
 func TestNewProvider_NoopForceFlush(t *testing.T) {
-	cfg := &config.OpenTelemetry{Enabled: false}
+	cfg := &config.MetricsConfig{Enabled: ptr(false)}
 	provider, err := NewProvider(WithContext(context.Background()), WithConfig(cfg))
 	assert.NoError(t, err)
 	assert.NoError(t, provider.ForceFlush(context.Background()))

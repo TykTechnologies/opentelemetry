@@ -25,16 +25,17 @@ func TestParseEndpoint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := &config.OpenTelemetry{Endpoint: tt.endpoint}
-			result := parseEndpoint(cfg)
+			result := parseEndpoint(tt.endpoint)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
 
 func TestExporterFactory_InvalidType(t *testing.T) {
-	cfg := &config.OpenTelemetry{
-		Exporter: "invalid",
+	cfg := &config.MetricsConfig{
+		ExporterConfig: config.ExporterConfig{
+			Exporter: "invalid",
+		},
 	}
 	_, err := exporterFactory(context.TODO(), cfg)
 	assert.Error(t, err)
