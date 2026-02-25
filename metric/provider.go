@@ -84,7 +84,7 @@ type meterProvider struct {
 	providerShutdownFn   func(context.Context) error
 	providerForceFlushFn func(context.Context) error
 
-	cfg    *config.OpenTelemetry
+	cfg    *config.MetricsConfig
 	logger Logger
 
 	ctx          context.Context
@@ -108,16 +108,16 @@ type meterProvider struct {
 //
 // Example:
 //
+//	metricsEnabled := true
 //	provider, err := metric.NewProvider(
 //		metric.WithContext(context.Background()),
-//		metric.WithConfig(&config.OpenTelemetry{
-//			Enabled:  true,
-//			Exporter: "grpc",
-//			Endpoint: "localhost:4317",
-//			Metrics: config.MetricsConfig{
-//				Enabled:        ptr(true),
-//				ExportInterval: 60,
+//		metric.WithConfig(&config.MetricsConfig{
+//			Enabled: &metricsEnabled,
+//			ExporterConfig: config.ExporterConfig{
+//				Exporter: "grpc",
+//				Endpoint: "localhost:4317",
 //			},
+//			ExportInterval: 60,
 //		}),
 //		metric.WithLogger(logrus.New().WithField("component", "tyk")),
 //	)
@@ -132,7 +132,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 		meterProvider:      otel.GetMeterProvider(),
 		providerShutdownFn: nil,
 		logger:             &noopLogger{},
-		cfg:                &config.OpenTelemetry{},
+		cfg:                &config.MetricsConfig{},
 		ctx:                context.Background(),
 		providerType:       NoopProvider,
 		enabled:            false,
@@ -147,10 +147,10 @@ func NewProvider(opts ...Option) (Provider, error) {
 	provider.cfg.SetDefaults()
 
 	// Check if metrics are enabled.
-	metricsEnabled := provider.cfg.Metrics.Enabled != nil && *provider.cfg.Metrics.Enabled
+	metricsEnabled := provider.cfg.Enabled != nil && *provider.cfg.Enabled
 
-	// If the provider is not enabled or metrics are not enabled, return a noop provider.
-	if !provider.cfg.Enabled || !metricsEnabled {
+	// If metrics are not enabled, return a noop provider.
+	if !metricsEnabled {
 		return provider, nil
 	}
 
@@ -175,7 +175,7 @@ func NewProvider(opts ...Option) (Provider, error) {
 	}
 
 	// Create the periodic reader with the configured export interval.
-	exportInterval := time.Duration(provider.cfg.Metrics.ExportInterval) * time.Second
+	exportInterval := time.Duration(provider.cfg.ExportInterval) * time.Second
 	readerOpts := []sdkmetric.PeriodicReaderOption{
 		sdkmetric.WithInterval(exportInterval),
 	}
@@ -262,7 +262,7 @@ func (mp *meterProvider) Shutdown(ctx context.Context) error {
 	}
 
 	// Use ShutdownTimeout if configured, otherwise fall back to ConnectionTimeout.
-	timeout := mp.cfg.Metrics.ShutdownTimeout
+	timeout := mp.cfg.ShutdownTimeout
 	if timeout == 0 {
 		timeout = mp.cfg.ConnectionTimeout
 	}

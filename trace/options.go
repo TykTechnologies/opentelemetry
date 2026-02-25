@@ -24,9 +24,11 @@ func (o *opts) apply(tp *traceProvider) {
 Example
 
 	config := &config.OpenTelemetry{
-		Enabled:  true,
-		Exporter: "grpc",
-		Endpoint: "localhost:4317",
+		Enabled: true,
+		ExporterConfig: config.ExporterConfig{
+			Exporter: "grpc",
+			Endpoint: "localhost:4317",
+		},
 	}
 	provider, err := trace.NewProvider(trace.WithConfig(config))
 	if err != nil {

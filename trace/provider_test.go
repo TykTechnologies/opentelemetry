@@ -35,10 +35,12 @@ func Test_Shutdown(t *testing.T) {
 		{
 			name: "shutdown - http otel enabled", // otel enabled should trigger the use of the sdk provider
 			givenCfg: &config.OpenTelemetry{
-				Enabled:           true,
-				Exporter:          "http",
-				Endpoint:          "http://localhost:4317",
-				ConnectionTimeout: 10,
+				Enabled: true,
+				ExporterConfig: config.ExporterConfig{
+					Exporter:          "http",
+					Endpoint:          "http://localhost:4317",
+					ConnectionTimeout: 10,
+				},
 			},
 			setupFn: func() (string, func()) {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -53,10 +55,12 @@ func Test_Shutdown(t *testing.T) {
 		{
 			name: "shutdown - grpc otel enabled", // otel enabled should trigger the use of the sdk provider
 			givenCfg: &config.OpenTelemetry{
-				Enabled:           true,
-				Exporter:          "grpc",
-				Endpoint:          "http://localhost:4317",
-				ConnectionTimeout: 10,
+				Enabled: true,
+				ExporterConfig: config.ExporterConfig{
+					Exporter:          "grpc",
+					Endpoint:          "http://localhost:4317",
+					ConnectionTimeout: 10,
+				},
 			},
 			setupFn: func() (string, func()) {
 				lis, err := net.Listen("tcp", "localhost:0")
@@ -114,10 +118,12 @@ func Test_Tracer(t *testing.T) {
 		{
 			name: "sdk tracer",
 			givenCfg: &config.OpenTelemetry{
-				Enabled:           true,
-				Exporter:          "http",
-				Endpoint:          "http://localhost:4317",
-				ConnectionTimeout: 10,
+				Enabled: true,
+				ExporterConfig: config.ExporterConfig{
+					Exporter:          "http",
+					Endpoint:          "http://localhost:4317",
+					ConnectionTimeout: 10,
+				},
 			},
 			setupFn: func() (string, func()) {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -207,10 +213,12 @@ func TestProvider_WithSpanBatchConfig(t *testing.T) {
 	defer server.Close()
 
 	cfg := &config.OpenTelemetry{
-		Enabled:           true,
-		Exporter:          "http",
-		Endpoint:          server.URL,
-		ConnectionTimeout: 10,
+		Enabled: true,
+		ExporterConfig: config.ExporterConfig{
+			Exporter:          "http",
+			Endpoint:          server.URL,
+			ConnectionTimeout: 10,
+		},
 		SpanProcessorType: "batch",
 		SpanBatchConfig: config.SpanBatchConfig{
 			MaxQueueSize:       8192,
@@ -258,10 +266,12 @@ func TestProvider_BatchConfigValidation(t *testing.T) {
 
 	t.Run("warning when MaxExportBatchSize > MaxQueueSize", func(t *testing.T) {
 		cfg := &config.OpenTelemetry{
-			Enabled:           true,
-			Exporter:          "http",
-			Endpoint:          server.URL,
-			ConnectionTimeout: 10,
+			Enabled: true,
+			ExporterConfig: config.ExporterConfig{
+				Exporter:          "http",
+				Endpoint:          server.URL,
+				ConnectionTimeout: 10,
+			},
 			SpanProcessorType: "batch",
 			SpanBatchConfig: config.SpanBatchConfig{
 				MaxQueueSize:       512,
@@ -286,10 +296,12 @@ func TestProvider_BatchConfigValidation(t *testing.T) {
 
 	t.Run("no warning when MaxExportBatchSize <= MaxQueueSize", func(t *testing.T) {
 		cfg := &config.OpenTelemetry{
-			Enabled:           true,
-			Exporter:          "http",
-			Endpoint:          server.URL,
-			ConnectionTimeout: 10,
+			Enabled: true,
+			ExporterConfig: config.ExporterConfig{
+				Exporter:          "http",
+				Endpoint:          server.URL,
+				ConnectionTimeout: 10,
+			},
 			SpanProcessorType: "batch",
 			SpanBatchConfig: config.SpanBatchConfig{
 				MaxQueueSize:       2048,

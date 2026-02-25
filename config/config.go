@@ -1,8 +1,9 @@
 package config
 
-type OpenTelemetry struct {
-	// A flag that can be used to enable or disable the trace exporter.
-	Enabled bool `json:"enabled"`
+// ExporterConfig holds shared transport fields for OTLP exporters.
+// It is embedded by both OpenTelemetry (traces) and MetricsConfig (metrics)
+// so each can target a different collector independently.
+type ExporterConfig struct {
 	// The type of the exporter to sending data in OTLP protocol.
 	// This should be set to the same type of the OpenTelemetry collector.
 	// Valid values are "grpc", or "http".
@@ -19,6 +20,15 @@ type OpenTelemetry struct {
 	// Name of the resource that will be used to identify the resource.
 	// Defaults to "tyk".
 	ResourceName string `json:"resource_name"`
+	// TLS configuration for the exporter.
+	TLS TLS `json:"tls"`
+}
+
+type OpenTelemetry struct {
+	// A flag that can be used to enable or disable the trace exporter.
+	Enabled bool `json:"enabled"`
+	// Shared exporter/transport configuration.
+	ExporterConfig `json:",inline"`
 	// Type of the span processor to use. Valid values are "simple" or "batch".
 	// Defaults to "batch".
 	SpanProcessorType string `json:"span_processor_type"`
@@ -57,19 +67,19 @@ type OpenTelemetry struct {
 	// trace ID consistency between the custom header and the reported trace, always send
 	// a valid OpenTelemetry Trace ID or UUID.
 	CustomTraceHeader string `json:"custom_trace_header"`
-	// TLS configuration for the exporter.
-	TLS TLS `json:"tls"`
 	// Defines the configurations to use in the sampler.
 	Sampling Sampling `json:"sampling"`
-	// Configuration for OpenTelemetry metrics.
-	Metrics MetricsConfig `json:"metrics"`
 }
 
 // MetricsConfig holds the configuration for OpenTelemetry metrics.
+// It embeds ExporterConfig so metrics can target a different collector
+// than traces, with its own endpoint, headers, TLS, etc.
 type MetricsConfig struct {
 	// A flag that can be used to enable or disable metrics export.
 	// Must be explicitly set to true to enable metrics. If omitted (nil), metrics are disabled.
 	Enabled *bool `json:"enabled,omitempty"`
+	// Shared exporter/transport configuration.
+	ExporterConfig `json:",inline"`
 	// The interval in seconds at which metrics are exported.
 	// Defaults to 60 seconds.
 	ExportInterval int `json:"export_interval"`
@@ -185,12 +195,8 @@ const (
 	TEMPORALITY_DELTA      = "delta"
 )
 
-// SetDefaults sets the default values for the OpenTelemetry config.
-func (c *OpenTelemetry) SetDefaults() {
-	if !c.Enabled {
-		return
-	}
-
+// SetDefaults sets the default values for the shared exporter config.
+func (c *ExporterConfig) SetDefaults() {
 	if c.Exporter == "" {
 		c.Exporter = GRPCEXPORTER
 	}
@@ -206,6 +212,15 @@ func (c *OpenTelemetry) SetDefaults() {
 	if c.ResourceName == "" {
 		c.ResourceName = "tyk"
 	}
+}
+
+// SetDefaults sets the default values for the OpenTelemetry trace config.
+func (c *OpenTelemetry) SetDefaults() {
+	if !c.Enabled {
+		return
+	}
+
+	c.ExporterConfig.SetDefaults()
 
 	if c.SpanProcessorType == "" {
 		c.SpanProcessorType = "batch"
@@ -222,38 +237,45 @@ func (c *OpenTelemetry) SetDefaults() {
 	if c.Sampling.Type == TRACEIDRATIOBASED && c.Sampling.Rate == 0 {
 		c.Sampling.Rate = 0.5
 	}
+}
 
-	// Set metrics defaults.
-	// Note: Metrics.Enabled has no default — if omitted (nil), metrics are disabled.
-	// Consumers must explicitly set metrics.enabled=true to enable metrics.
-
-	if c.Metrics.ExportInterval == 0 {
-		c.Metrics.ExportInterval = 60
-	}
-
-	if c.Metrics.Temporality == "" {
-		c.Metrics.Temporality = TEMPORALITY_CUMULATIVE
-	}
-
-	if c.Metrics.ShutdownTimeout == 0 {
-		c.Metrics.ShutdownTimeout = 30
-	}
-
-	// Set retry defaults
-	if c.Metrics.Retry.Enabled == nil {
+// SetDefaults sets the default values for the metrics retry config.
+func (c *MetricsRetryConfig) SetDefaults() {
+	if c.Enabled == nil {
 		enabled := true
-		c.Metrics.Retry.Enabled = &enabled
+		c.Enabled = &enabled
 	}
 
-	if c.Metrics.Retry.InitialInterval == 0 {
-		c.Metrics.Retry.InitialInterval = 5000 // 5 seconds
+	if c.InitialInterval == 0 {
+		c.InitialInterval = 5000 // 5 seconds
 	}
 
-	if c.Metrics.Retry.MaxInterval == 0 {
-		c.Metrics.Retry.MaxInterval = 30000 // 30 seconds
+	if c.MaxInterval == 0 {
+		c.MaxInterval = 30000 // 30 seconds
 	}
 
-	if c.Metrics.Retry.MaxElapsedTime == 0 {
-		c.Metrics.Retry.MaxElapsedTime = 60000 // 1 minute
+	if c.MaxElapsedTime == 0 {
+		c.MaxElapsedTime = 60000 // 1 minute
 	}
+}
+
+// SetDefaults sets the default values for the metrics config.
+// Note: Enabled has no default — if omitted (nil), metrics are disabled.
+// Consumers must explicitly set enabled=true to enable metrics.
+func (c *MetricsConfig) SetDefaults() {
+	c.ExporterConfig.SetDefaults()
+
+	if c.ExportInterval == 0 {
+		c.ExportInterval = 60
+	}
+
+	if c.Temporality == "" {
+		c.Temporality = TEMPORALITY_CUMULATIVE
+	}
+
+	if c.ShutdownTimeout == 0 {
+		c.ShutdownTimeout = 30
+	}
+
+	c.Retry.SetDefaults()
 }

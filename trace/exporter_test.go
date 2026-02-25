@@ -19,7 +19,9 @@ func Test_NewGRPCClient(t *testing.T) {
 	endpoint := "localhost:4317"
 
 	cfg := &config.OpenTelemetry{
-		Endpoint: endpoint,
+		ExporterConfig: config.ExporterConfig{
+			Endpoint: endpoint,
+		},
 	}
 
 	client, err := newGRPCClient(ctx, cfg)
@@ -32,7 +34,9 @@ func Test_NewHTTPClient(t *testing.T) {
 	endpoint := "localhost:4317"
 
 	cfg := &config.OpenTelemetry{
-		Endpoint: endpoint,
+		ExporterConfig: config.ExporterConfig{
+			Endpoint: endpoint,
+		},
 	}
 
 	client, err := newHTTPClient(ctx, cfg)
@@ -52,16 +56,20 @@ func Test_ExporterFactory(t *testing.T) {
 		{
 			name: "invalid exporter type",
 			givenConfig: &config.OpenTelemetry{
-				Exporter: "invalid",
+				ExporterConfig: config.ExporterConfig{
+					Exporter: "invalid",
+				},
 			},
 			expectedErr: fmt.Errorf("invalid exporter type: %s", "invalid"),
 		},
 		{
 			name: "http exporter",
 			givenConfig: &config.OpenTelemetry{
-				Exporter:          "http",
-				Endpoint:          "to be replace by setupFn",
-				ConnectionTimeout: 1,
+				ExporterConfig: config.ExporterConfig{
+					Exporter:          "http",
+					Endpoint:          "to be replace by setupFn",
+					ConnectionTimeout: 1,
+				},
 			},
 			setupFn: func() (string, func()) {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -77,9 +85,11 @@ func Test_ExporterFactory(t *testing.T) {
 		{
 			name: "gRPC exporter",
 			givenConfig: &config.OpenTelemetry{
-				Exporter:          "grpc",
-				Endpoint:          "to be replace by setupFn",
-				ConnectionTimeout: 1,
+				ExporterConfig: config.ExporterConfig{
+					Exporter:          "grpc",
+					Endpoint:          "to be replace by setupFn",
+					ConnectionTimeout: 1,
+				},
 			},
 			setupFn: func() (string, func()) {
 				lis, err := net.Listen("tcp", "localhost:0")
@@ -140,7 +150,7 @@ func TestParseEndpoint(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := &config.OpenTelemetry{Endpoint: tc.endpoint}
+			cfg := &config.OpenTelemetry{ExporterConfig: config.ExporterConfig{Endpoint: tc.endpoint}}
 			got := parseEndpoint(cfg)
 			if got != tc.want {
 				t.Errorf("parseEndpoint(%q) = %q; want %q", tc.endpoint, got, tc.want)

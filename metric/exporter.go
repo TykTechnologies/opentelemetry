@@ -26,7 +26,7 @@ func deltaTemporalitySelector(sdkmetric.InstrumentKind) metricdata.Temporality {
 	return metricdata.DeltaTemporality
 }
 
-func exporterFactory(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.Exporter, error) {
+func exporterFactory(ctx context.Context, cfg *config.MetricsConfig) (sdkmetric.Exporter, error) {
 	switch cfg.Exporter {
 	case config.GRPCEXPORTER:
 		return newGRPCExporter(ctx, cfg)
@@ -37,7 +37,7 @@ func exporterFactory(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.
 	}
 }
 
-func newGRPCExporter(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.Exporter, error) {
+func newGRPCExporter(ctx context.Context, cfg *config.MetricsConfig) (sdkmetric.Exporter, error) {
 	clientOptions := []otlpmetricgrpc.Option{
 		otlpmetricgrpc.WithEndpoint(cfg.Endpoint),
 		otlpmetricgrpc.WithTimeout(time.Duration(cfg.ConnectionTimeout) * time.Second),
@@ -45,17 +45,17 @@ func newGRPCExporter(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.
 	}
 
 	// Configure retry if enabled.
-	if cfg.Metrics.Retry.Enabled != nil && *cfg.Metrics.Retry.Enabled {
+	if cfg.Retry.Enabled != nil && *cfg.Retry.Enabled {
 		clientOptions = append(clientOptions, otlpmetricgrpc.WithRetry(otlpmetricgrpc.RetryConfig{
 			Enabled:         true,
-			InitialInterval: time.Duration(cfg.Metrics.Retry.InitialInterval) * time.Millisecond,
-			MaxInterval:     time.Duration(cfg.Metrics.Retry.MaxInterval) * time.Millisecond,
-			MaxElapsedTime:  time.Duration(cfg.Metrics.Retry.MaxElapsedTime) * time.Millisecond,
+			InitialInterval: time.Duration(cfg.Retry.InitialInterval) * time.Millisecond,
+			MaxInterval:     time.Duration(cfg.Retry.MaxInterval) * time.Millisecond,
+			MaxElapsedTime:  time.Duration(cfg.Retry.MaxElapsedTime) * time.Millisecond,
 		}))
 	}
 
 	// Apply temporality preference.
-	if cfg.Metrics.Temporality == config.TEMPORALITY_DELTA {
+	if cfg.Temporality == config.TEMPORALITY_DELTA {
 		clientOptions = append(clientOptions, otlpmetricgrpc.WithTemporalitySelector(deltaTemporalitySelector))
 	}
 
@@ -77,10 +77,10 @@ func newGRPCExporter(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.
 	return otlpmetricgrpc.New(ctx, clientOptions...)
 }
 
-func newHTTPExporter(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.Exporter, error) {
+func newHTTPExporter(ctx context.Context, cfg *config.MetricsConfig) (sdkmetric.Exporter, error) {
 	// OTel SDK does not support URL with scheme nor path, so we need to parse it.
 	// The scheme will be added automatically, depending on the TLS setting.
-	endpoint := parseEndpoint(cfg)
+	endpoint := parseEndpoint(cfg.Endpoint)
 
 	clientOptions := []otlpmetrichttp.Option{
 		otlpmetrichttp.WithEndpoint(endpoint),
@@ -89,17 +89,17 @@ func newHTTPExporter(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.
 	}
 
 	// Configure retry if enabled.
-	if cfg.Metrics.Retry.Enabled != nil && *cfg.Metrics.Retry.Enabled {
+	if cfg.Retry.Enabled != nil && *cfg.Retry.Enabled {
 		clientOptions = append(clientOptions, otlpmetrichttp.WithRetry(otlpmetrichttp.RetryConfig{
 			Enabled:         true,
-			InitialInterval: time.Duration(cfg.Metrics.Retry.InitialInterval) * time.Millisecond,
-			MaxInterval:     time.Duration(cfg.Metrics.Retry.MaxInterval) * time.Millisecond,
-			MaxElapsedTime:  time.Duration(cfg.Metrics.Retry.MaxElapsedTime) * time.Millisecond,
+			InitialInterval: time.Duration(cfg.Retry.InitialInterval) * time.Millisecond,
+			MaxInterval:     time.Duration(cfg.Retry.MaxInterval) * time.Millisecond,
+			MaxElapsedTime:  time.Duration(cfg.Retry.MaxElapsedTime) * time.Millisecond,
 		}))
 	}
 
 	// Apply temporality preference.
-	if cfg.Metrics.Temporality == config.TEMPORALITY_DELTA {
+	if cfg.Temporality == config.TEMPORALITY_DELTA {
 		clientOptions = append(clientOptions, otlpmetrichttp.WithTemporalitySelector(deltaTemporalitySelector))
 	}
 
@@ -121,8 +121,8 @@ func newHTTPExporter(ctx context.Context, cfg *config.OpenTelemetry) (sdkmetric.
 	return otlpmetrichttp.New(ctx, clientOptions...)
 }
 
-func parseEndpoint(cfg *config.OpenTelemetry) string {
-	endpoint := cfg.Endpoint
+func parseEndpoint(endpoint string) string {
+	raw := endpoint
 	// Temporarily adding scheme to get the host and port.
 	if !strings.Contains(endpoint, "://") {
 		endpoint = "http://" + endpoint
@@ -130,7 +130,7 @@ func parseEndpoint(cfg *config.OpenTelemetry) string {
 
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return cfg.Endpoint
+		return raw
 	}
 
 	host := u.Hostname()

@@ -28,16 +28,19 @@ func (o *opts) apply(mp *meterProvider) {
 //
 // Example:
 //
-//	config := &config.OpenTelemetry{
-//		Enabled:  true,
-//		Exporter: "grpc",
-//		Endpoint: "localhost:4317",
+//	metricsEnabled := true
+//	cfg := &config.MetricsConfig{
+//		Enabled:  &metricsEnabled,
+//		ExporterConfig: config.ExporterConfig{
+//			Exporter: "grpc",
+//			Endpoint: "localhost:4317",
+//		},
 //	}
-//	provider, err := metric.NewProvider(metric.WithConfig(config))
+//	provider, err := metric.NewProvider(metric.WithConfig(cfg))
 //	if err != nil {
 //		panic(err)
 //	}
-func WithConfig(cfg *config.OpenTelemetry) Option {
+func WithConfig(cfg *config.MetricsConfig) Option {
 	return &opts{
 		fn: func(mp *meterProvider) {
 			mp.cfg = cfg
