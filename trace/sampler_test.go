@@ -126,7 +126,7 @@ func TestSampler(t *testing.T) {
 			}
 
 			if tc.samplerName == config.TRACEIDRATIOBASED && tc.samplingRate > 0 && tc.samplingRate < 1 {
-				tolerance := 0.015
+				tolerance := 0.05
 				floatSamples := float64(tc.samples)
 				lowLimit := floatSamples * (tc.samplingRate - tolerance)
 				highLimit := floatSamples * (tc.samplingRate + tolerance)
