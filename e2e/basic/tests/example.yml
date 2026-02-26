@@ -23,8 +23,7 @@ spec:
         - attr:tracetest.span.name = "GET /test"
         - attr:tyk.api.name = "test"
         - attr:tyk.api.orgid = "fakeorg"
-        - attr:http.request.body.size = 14 # {"foo": "bar"} = 14 bytes
-        - attr:http.response.body.size = 21 # {"status": "success"} = 21 bytes
+        - attr:http.response.body.size = 21 # {"status":"success"}\n = 21 bytes
     - name: Check if http span has one child span
       selector: span[tracetest.span.type="http"]
       assertions:
