@@ -9,29 +9,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var (
-	// assert that http.Flusher is implemented by responseWriterWithSize since it is to be used in Tyk gateway.
-	_ http.Flusher = &responseWriterWithSize{}
-)
-
-// responseWriterWithSize is a struct that wraps an http.ResponseWriter and keeps track of the size of the response.
-type responseWriterWithSize struct {
-	http.ResponseWriter
-	http.Hijacker
-	size int
-}
-
-func (rw *responseWriterWithSize) Write(p []byte) (int, error) {
-	n, err := rw.ResponseWriter.Write(p)
-	rw.size += n
-
-	return n, err
-}
-
-func (rw *responseWriterWithSize) Flush() {
-	rw.ResponseWriter.(http.Flusher).Flush()
-}
-
 // NewHTTPHandler wraps the provided http.Handler with one that starts a span
 // and injects the span context into the outbound request headers.
 // You need to initialize the TracerProvider first since it utilizes the underlying
@@ -50,21 +27,7 @@ func NewHTTPHandler(name string, handler http.Handler, tp Provider, attr ...Attr
 		trace.WithAttributes(attr...),
 	))
 
-	return otelhttp.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		span := trace.SpanFromContext(r.Context())
-		// Wrap response writer to capture the response size
-		rw := &responseWriterWithSize{
-			ResponseWriter: w,
-		}
-		h, ok := w.(http.Hijacker)
-		if ok {
-			rw.Hijacker = h
-		}
-
-		span.SetAttributes(NewAttribute("http.request.body.size", r.ContentLength))
-		handler.ServeHTTP(rw, r)
-		span.SetAttributes(NewAttribute("http.response.body.size", rw.size))
-	}), name, opts...)
+	return otelhttp.NewHandler(handler, name, opts...)
 }
 
 var httpSpanNameFormatter = func(operation string, r *http.Request) string {
