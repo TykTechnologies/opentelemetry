@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 
 	"github.com/TykTechnologies/opentelemetry/config"
 )
@@ -178,6 +179,19 @@ func WithCustomResourceAttributes(attrs ...Attribute) Option {
 	return &opts{
 		fn: func(mp *meterProvider) {
 			mp.resources.customAttrs = attrs
+		},
+	}
+}
+
+// WithReader injects a custom sdkmetric.Reader into the meter provider.
+// When set, the provider skips exporter creation and uses this reader instead.
+// The custom reader implies metrics are enabled — no WithConfig needed.
+//
+// Most consumers should use metric/metrictest.NewProvider instead.
+func WithReader(reader sdkmetric.Reader) Option {
+	return &opts{
+		fn: func(mp *meterProvider) {
+			mp.customReader = reader
 		},
 	}
 }

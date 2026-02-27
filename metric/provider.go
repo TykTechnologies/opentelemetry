@@ -91,7 +91,8 @@ type meterProvider struct {
 	providerType string
 	enabled      bool
 
-	resources resourceConfig
+	resources    resourceConfig
+	customReader sdkmetric.Reader // injected reader (e.g. ManualReader for tests)
 
 	// Health and stats tracking
 	healthy         atomic.Bool
@@ -149,8 +150,31 @@ func NewProvider(opts ...Option) (Provider, error) {
 	// Check if metrics are enabled.
 	metricsEnabled := provider.cfg.Enabled != nil && *provider.cfg.Enabled
 
-	// If metrics are not enabled, return a noop provider.
-	if !metricsEnabled {
+	// Custom reader implies metrics are enabled (test/manual mode).
+	if provider.customReader == nil && !metricsEnabled {
+		return provider, nil
+	}
+
+	// If a custom reader is provided, use it directly (skip exporter creation).
+	if provider.customReader != nil {
+		resource, err := resourceFactory(provider.ctx, provider.cfg.ResourceName, provider.resources)
+		if err != nil {
+			return provider, fmt.Errorf("failed to create resource: %w", err)
+		}
+
+		meterProv := sdkmetric.NewMeterProvider(
+			sdkmetric.WithResource(resource),
+			sdkmetric.WithReader(provider.customReader),
+		)
+
+		provider.meterProvider = meterProv
+		provider.providerShutdownFn = meterProv.Shutdown
+		provider.providerForceFlushFn = meterProv.ForceFlush
+		provider.providerType = OtelProvider
+		provider.enabled = true
+		provider.healthy.Store(true)
+
+		provider.logger.Info("Meter provider initialized with custom reader")
 		return provider, nil
 	}
 
