@@ -237,6 +237,20 @@ func (c *OpenTelemetry) SetDefaults() {
 	if c.Sampling.Type == TRACEIDRATIOBASED && c.Sampling.Rate == 0 {
 		c.Sampling.Rate = 0.5
 	}
+
+	if c.SpanProcessorType == "batch" {
+		if c.SpanBatchConfig.MaxQueueSize == 0 {
+			c.SpanBatchConfig.MaxQueueSize = 2048
+		}
+
+		if c.SpanBatchConfig.MaxExportBatchSize == 0 {
+			c.SpanBatchConfig.MaxExportBatchSize = 512
+		}
+
+		if c.SpanBatchConfig.BatchTimeout == 0 {
+			c.SpanBatchConfig.BatchTimeout = 5
+		}
+	}
 }
 
 // SetDefaults sets the default values for the metrics retry config.
