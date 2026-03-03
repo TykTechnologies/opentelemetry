@@ -37,6 +37,11 @@ func Test_SetDefault(t *testing.T) {
 					ResourceName:      "test-resource",
 				},
 				SpanProcessorType:  "simple",
+				SpanBatchConfig: SpanBatchConfig{
+					MaxQueueSize:       1000,
+					MaxExportBatchSize: 100,
+					BatchTimeout:       10,
+				},
 				ContextPropagation: "b3",
 				Sampling: Sampling{
 					Type: TRACEIDRATIOBASED,
@@ -52,6 +57,11 @@ func Test_SetDefault(t *testing.T) {
 					ResourceName:      "test-resource",
 				},
 				SpanProcessorType:  "simple",
+				SpanBatchConfig: SpanBatchConfig{
+					MaxQueueSize:       1000,
+					MaxExportBatchSize: 100,
+					BatchTimeout:       10,
+				},
 				ContextPropagation: "b3",
 				Sampling: Sampling{
 					Type: TRACEIDRATIOBASED,
@@ -73,6 +83,11 @@ func Test_SetDefault(t *testing.T) {
 					ResourceName:      "tyk",
 				},
 				SpanProcessorType:  "batch",
+				SpanBatchConfig: SpanBatchConfig{
+					MaxQueueSize:       2048,
+					MaxExportBatchSize: 512,
+					BatchTimeout:       5,
+				},
 				ContextPropagation: "tracecontext",
 				Sampling: Sampling{
 					Type: ALWAYSON,
@@ -96,6 +111,11 @@ func Test_SetDefault(t *testing.T) {
 					ResourceName:      "tyk",
 				},
 				SpanProcessorType:  "batch",
+				SpanBatchConfig: SpanBatchConfig{
+					MaxQueueSize:       2048,
+					MaxExportBatchSize: 512,
+					BatchTimeout:       5,
+				},
 				ContextPropagation: "tracecontext",
 				Sampling: Sampling{
 					Type: TRACEIDRATIOBASED,
