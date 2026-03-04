@@ -2,7 +2,6 @@ package metric
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -15,9 +14,14 @@ import (
 	"github.com/TykTechnologies/opentelemetry/config"
 )
 
-// errNoExportError is a sentinel stored in lastExportError after a successful
-// export, because atomic.Value.Store panics on nil.
-var errNoExportError = errors.New("")
+// exportErrorBox wraps an error so that atomic.Value always stores the same
+// concrete type (*exportErrorBox). Without this, storing different concrete
+// error types causes a panic: "sync/atomic: store of inconsistently typed
+// value into Value".
+type exportErrorBox struct{ err error }
+
+// noExportError is stored after a successful export to signal "no error".
+var noExportError = &exportErrorBox{}
 
 const (
 	// NoopProvider indicates a noop provider type.
@@ -248,7 +252,7 @@ func (e *statsExporter) Export(ctx context.Context, rm *metricdata.ResourceMetri
 	err := e.exporter.Export(ctx, rm)
 	if err != nil {
 		e.provider.failedExports.Add(1)
-		e.provider.lastExportError.Store(err)
+		e.provider.lastExportError.Store(&exportErrorBox{err: err})
 		e.provider.healthy.Store(false)
 		e.provider.logger.Error("metric export failed", err)
 		return err
@@ -257,10 +261,7 @@ func (e *statsExporter) Export(ctx context.Context, rm *metricdata.ResourceMetri
 	e.provider.successExports.Add(1)
 	e.provider.lastSuccessTime.Store(time.Now())
 	e.provider.healthy.Store(true)
-	// Note: we cannot store nil into atomic.Value (it panics), so we store a
-	// sentinel empty-message error to signal "no error". LastExportError()
-	// checks for this and returns nil.
-	e.provider.lastExportError.Store(errNoExportError)
+	e.provider.lastExportError.Store(noExportError)
 	return nil
 }
 
@@ -328,8 +329,8 @@ func (mp *meterProvider) LastExportError() error {
 		return nil
 	}
 	if v := mp.lastExportError.Load(); v != nil {
-		if err, ok := v.(error); ok && !errors.Is(err, errNoExportError) {
-			return err
+		if box, ok := v.(*exportErrorBox); ok && box.err != nil {
+			return box.err
 		}
 	}
 	return nil

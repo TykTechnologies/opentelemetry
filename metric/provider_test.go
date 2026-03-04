@@ -2,6 +2,7 @@ package metric
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -327,6 +328,55 @@ func TestNewProvider_WithReader_NoConfigNeeded(t *testing.T) {
 	assert.True(t, provider.Enabled())
 	assert.Equal(t, OtelProvider, provider.Type())
 }
+
+// TestStatsExporter_MixedErrorTypes verifies that the statsExporter does not
+// panic when storing errors of different concrete types (success sentinel vs
+// real export error) into the atomic.Value.
+func TestStatsExporter_MixedErrorTypes(t *testing.T) {
+	mp := &meterProvider{enabled: true, logger: &noopLogger{}}
+	failErr := fmt.Errorf("wrapped: %w", fmt.Errorf("inner"))
+	exporter := &statsExporter{
+		exporter: &fakeExporter{errs: []error{nil, failErr, nil}},
+		provider: mp,
+	}
+	ctx := context.Background()
+	rm := &metricdata.ResourceMetrics{}
+
+	// Cycle: success → failure → success. Before the fix the second or third
+	// call would panic due to inconsistent concrete types in atomic.Value.
+	assert.NoError(t, exporter.Export(ctx, rm))
+	assert.Nil(t, mp.LastExportError())
+
+	assert.Error(t, exporter.Export(ctx, rm))
+	assert.ErrorIs(t, mp.LastExportError(), failErr)
+
+	assert.NoError(t, exporter.Export(ctx, rm))
+	assert.Nil(t, mp.LastExportError())
+}
+
+// fakeExporter is a test double that returns errors from a pre-defined
+// sequence, cycling when the sequence is exhausted.
+type fakeExporter struct {
+	errs []error
+	idx  int
+}
+
+func (f *fakeExporter) Export(_ context.Context, _ *metricdata.ResourceMetrics) error {
+	err := f.errs[f.idx%len(f.errs)]
+	f.idx++
+	return err
+}
+
+func (f *fakeExporter) Temporality(sdkmetric.InstrumentKind) metricdata.Temporality {
+	return metricdata.CumulativeTemporality
+}
+
+func (f *fakeExporter) Aggregation(sdkmetric.InstrumentKind) sdkmetric.Aggregation {
+	return sdkmetric.DefaultAggregationSelector(0)
+}
+
+func (f *fakeExporter) Shutdown(context.Context) error   { return nil }
+func (f *fakeExporter) ForceFlush(context.Context) error { return nil }
 
 func TestNewProvider_WithReader_Shutdown(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
