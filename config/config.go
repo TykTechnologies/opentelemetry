@@ -96,6 +96,11 @@ type MetricsConfig struct {
 
 	// Retry configuration for exporter failures.
 	Retry MetricsRetryConfig `json:"retry"`
+
+	// RuntimeMetrics enables Go runtime metrics collection.
+	// When true (or omitted when metrics are enabled), runtime metrics are collected.
+	// Set to false to disable runtime metrics while keeping API metrics active.
+	RuntimeMetrics *bool `json:"runtime_metrics"`
 }
 
 // MetricsRetryConfig configures retry behavior for metric export failures.
@@ -289,6 +294,11 @@ func (c *MetricsConfig) SetDefaults() {
 
 	if c.ShutdownTimeout == 0 {
 		c.ShutdownTimeout = 30
+	}
+
+	if c.RuntimeMetrics == nil && c.Enabled != nil && *c.Enabled {
+		runtimeEnabled := true
+		c.RuntimeMetrics = &runtimeEnabled
 	}
 
 	c.Retry.SetDefaults()

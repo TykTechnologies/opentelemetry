@@ -36,7 +36,7 @@ func Test_SetDefault(t *testing.T) {
 					ConnectionTimeout: 10,
 					ResourceName:      "test-resource",
 				},
-				SpanProcessorType:  "simple",
+				SpanProcessorType: "simple",
 				SpanBatchConfig: SpanBatchConfig{
 					MaxQueueSize:       1000,
 					MaxExportBatchSize: 100,
@@ -56,7 +56,7 @@ func Test_SetDefault(t *testing.T) {
 					ConnectionTimeout: 10,
 					ResourceName:      "test-resource",
 				},
-				SpanProcessorType:  "simple",
+				SpanProcessorType: "simple",
 				SpanBatchConfig: SpanBatchConfig{
 					MaxQueueSize:       1000,
 					MaxExportBatchSize: 100,
@@ -82,7 +82,7 @@ func Test_SetDefault(t *testing.T) {
 					ConnectionTimeout: 1,
 					ResourceName:      "tyk",
 				},
-				SpanProcessorType:  "batch",
+				SpanProcessorType: "batch",
 				SpanBatchConfig: SpanBatchConfig{
 					MaxQueueSize:       2048,
 					MaxExportBatchSize: 512,
@@ -110,7 +110,7 @@ func Test_SetDefault(t *testing.T) {
 					ConnectionTimeout: 1,
 					ResourceName:      "tyk",
 				},
-				SpanProcessorType:  "batch",
+				SpanProcessorType: "batch",
 				SpanBatchConfig: SpanBatchConfig{
 					MaxQueueSize:       2048,
 					MaxExportBatchSize: 512,
@@ -187,7 +187,7 @@ func TestMetricsConfig_SetDefaults(t *testing.T) {
 		expected MetricsConfig
 	}{
 		{
-			name:  "all defaults",
+			name:  "all defaults - metrics disabled",
 			given: MetricsConfig{},
 			expected: MetricsConfig{
 				Enabled: nil,
@@ -200,6 +200,84 @@ func TestMetricsConfig_SetDefaults(t *testing.T) {
 				ExportInterval:  60,
 				Temporality:     TEMPORALITY_CUMULATIVE,
 				ShutdownTimeout: 30,
+				RuntimeMetrics:  nil,
+				Retry: MetricsRetryConfig{
+					Enabled:         ptr(true),
+					InitialInterval: 5000,
+					MaxInterval:     30000,
+					MaxElapsedTime:  60000,
+				},
+			},
+		},
+		{
+			name: "metrics enabled - runtime metrics defaults to true",
+			given: MetricsConfig{
+				Enabled: ptr(true),
+			},
+			expected: MetricsConfig{
+				Enabled: ptr(true),
+				ExporterConfig: ExporterConfig{
+					Exporter:          "grpc",
+					Endpoint:          "localhost:4317",
+					ConnectionTimeout: 1,
+					ResourceName:      "tyk",
+				},
+				ExportInterval:  60,
+				Temporality:     TEMPORALITY_CUMULATIVE,
+				ShutdownTimeout: 30,
+				RuntimeMetrics:  ptr(true),
+				Retry: MetricsRetryConfig{
+					Enabled:         ptr(true),
+					InitialInterval: 5000,
+					MaxInterval:     30000,
+					MaxElapsedTime:  60000,
+				},
+			},
+		},
+		{
+			name: "metrics enabled - runtime metrics explicitly false",
+			given: MetricsConfig{
+				Enabled:        ptr(true),
+				RuntimeMetrics: ptr(false),
+			},
+			expected: MetricsConfig{
+				Enabled: ptr(true),
+				ExporterConfig: ExporterConfig{
+					Exporter:          "grpc",
+					Endpoint:          "localhost:4317",
+					ConnectionTimeout: 1,
+					ResourceName:      "tyk",
+				},
+				ExportInterval:  60,
+				Temporality:     TEMPORALITY_CUMULATIVE,
+				ShutdownTimeout: 30,
+				RuntimeMetrics:  ptr(false),
+				Retry: MetricsRetryConfig{
+					Enabled:         ptr(true),
+					InitialInterval: 5000,
+					MaxInterval:     30000,
+					MaxElapsedTime:  60000,
+				},
+			},
+		},
+		{
+			name: "metrics enabled - runtime metrics explicitly true",
+			given: MetricsConfig{
+				Enabled:        ptr(true),
+				RuntimeMetrics: ptr(true),
+			},
+			expected: MetricsConfig{
+				Enabled: ptr(true),
+				ExporterConfig: ExporterConfig{
+					Exporter:          "grpc",
+					Endpoint:          "localhost:4317",
+					ConnectionTimeout: 1,
+					ResourceName:      "tyk",
+				},
+				ExportInterval:  60,
+				Temporality:     TEMPORALITY_CUMULATIVE,
+				ShutdownTimeout: 30,
+				RuntimeMetrics:  ptr(true),
 				Retry: MetricsRetryConfig{
 					Enabled:         ptr(true),
 					InitialInterval: 5000,
@@ -219,6 +297,7 @@ func TestMetricsConfig_SetDefaults(t *testing.T) {
 				ExportInterval:  30,
 				Temporality:     TEMPORALITY_DELTA,
 				ShutdownTimeout: 10,
+				RuntimeMetrics:  ptr(false),
 				Retry: MetricsRetryConfig{
 					Enabled:         ptr(false),
 					InitialInterval: 1000,
@@ -237,6 +316,7 @@ func TestMetricsConfig_SetDefaults(t *testing.T) {
 				ExportInterval:  30,
 				Temporality:     TEMPORALITY_DELTA,
 				ShutdownTimeout: 10,
+				RuntimeMetrics:  ptr(false),
 				Retry: MetricsRetryConfig{
 					Enabled:         ptr(false),
 					InitialInterval: 1000,
