@@ -139,6 +139,12 @@ func NewProvider(opts ...Option) (Provider, error) {
 		enabled:            false,
 	}
 
+	// Initialize atomic.Value fields to prevent type mismatch panics.
+	// atomic.Value requires the first Store to establish the type.
+	provider.lastExportError.Store(errNoExportError)
+	provider.lastExportTime.Store(time.Time{})
+	provider.lastSuccessTime.Store(time.Time{})
+
 	// Apply the given options.
 	for _, opt := range opts {
 		opt.apply(provider)
