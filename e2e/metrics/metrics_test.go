@@ -138,6 +138,68 @@ func TestPrometheusMetrics(t *testing.T) {
 	}
 }
 
+func TestCardinalityOverflow(t *testing.T) {
+	waitForHealthy(t)
+
+	// The app is configured with CardinalityLimit: 5.
+	// Send 10 requests, each with a unique request_id attribute.
+	const totalRequests = 10
+	for i := range totalRequests {
+		resp, err := http.Get(fmt.Sprintf("%s/cardinality-test?id=req-%d", appURL, i))
+		if err != nil {
+			t.Fatalf("request %d failed: %v", i, err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("request %d returned status %d", i, resp.StatusCode)
+		}
+	}
+
+	// Wait for export cycle so metrics appear in Prometheus.
+	time.Sleep(exportInterval + 3*time.Second)
+
+	body := fetchPrometheus(t)
+
+	// Count distinct series for e2e_cardinality_requests.
+	// Each line like `e2e_cardinality_requests{...} N` is one series.
+	var seriesCount int
+	var hasOverflow bool
+	var totalCount float64
+	for _, line := range strings.Split(body, "\n") {
+		if !strings.HasPrefix(line, "e2e_cardinality_requests{") {
+			continue
+		}
+		seriesCount++
+		if strings.Contains(line, `otel_metric_overflow="true"`) {
+			hasOverflow = true
+		}
+		// Parse the value (last space-separated field).
+		parts := strings.Fields(line)
+		if len(parts) >= 2 {
+			var val float64
+			fmt.Sscanf(parts[len(parts)-1], "%f", &val)
+			totalCount += val
+		}
+	}
+
+	// With limit=5, we expect at most 5 individual series + 1 overflow series.
+	maxSeries := 5 + 1
+	if seriesCount > maxSeries {
+		t.Errorf("expected at most %d series for e2e_cardinality_requests, got %d", maxSeries, seriesCount)
+	}
+
+	if !hasOverflow {
+		t.Error("expected overflow series with otel_metric_overflow=\"true\" label")
+	}
+
+	// Total count across all series (including overflow) should equal totalRequests.
+	if int(totalCount) != totalRequests {
+		t.Errorf("expected total count=%d across all series, got %v", totalRequests, totalCount)
+	}
+
+	t.Logf("cardinality test: %d series, overflow=%v, total_count=%v", seriesCount, hasOverflow, totalCount)
+}
+
 // helpers
 
 func compose(args ...string) error {

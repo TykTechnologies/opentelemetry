@@ -166,10 +166,15 @@ func NewProvider(opts ...Option) (Provider, error) {
 			return provider, fmt.Errorf("failed to create resource: %w", err)
 		}
 
-		meterProv := sdkmetric.NewMeterProvider(
+		providerOpts := []sdkmetric.Option{
 			sdkmetric.WithResource(resource),
 			sdkmetric.WithReader(provider.customReader),
-		)
+		}
+		if provider.cfg.CardinalityLimit > 0 {
+			providerOpts = append(providerOpts, sdkmetric.WithCardinalityLimit(provider.cfg.CardinalityLimit))
+		}
+
+		meterProv := sdkmetric.NewMeterProvider(providerOpts...)
 
 		provider.meterProvider = meterProv
 		provider.providerShutdownFn = meterProv.Shutdown
@@ -211,10 +216,15 @@ func NewProvider(opts ...Option) (Provider, error) {
 	reader := sdkmetric.NewPeriodicReader(wrappedExporter, readerOpts...)
 
 	// Create the meter provider.
-	meterProv := sdkmetric.NewMeterProvider(
+	providerOpts := []sdkmetric.Option{
 		sdkmetric.WithResource(resource),
 		sdkmetric.WithReader(reader),
-	)
+	}
+	if provider.cfg.CardinalityLimit > 0 {
+		providerOpts = append(providerOpts, sdkmetric.WithCardinalityLimit(provider.cfg.CardinalityLimit))
+	}
+
+	meterProv := sdkmetric.NewMeterProvider(providerOpts...)
 
 	// Set the local meter provider.
 	provider.meterProvider = meterProv
