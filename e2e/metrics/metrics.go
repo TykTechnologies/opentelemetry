@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -34,8 +35,9 @@ func main() {
 				Enable: false,
 			},
 		},
-		ExportInterval: 5, // short interval for fast e2e feedback
-		Temporality:    "cumulative",
+		ExportInterval:   5, // short interval for fast e2e feedback
+		Temporality:      "cumulative",
+		CardinalityLimit: 5,
 	}
 
 	log.Println("Initializing OpenTelemetry metrics at e2e-metrics:", cfg.Endpoint)
@@ -80,6 +82,12 @@ func main() {
 		return
 	}
 
+	cardinalityCounter, err := provider.NewCounter("e2e.cardinality.requests", "Counter for cardinality overflow test", "1")
+	if err != nil {
+		log.Printf("error creating cardinality counter: %s", err.Error())
+		return
+	}
+
 	mux := http.NewServeMux()
 
 	// Metrics test endpoint - records all 4 instrument types on each request.
@@ -110,6 +118,16 @@ func main() {
 			"status":      "ok",
 			"duration_ms": duration,
 		})
+	}))
+
+	// Cardinality test endpoint - records a counter with a unique request_id attribute per call.
+	mux.Handle("/cardinality-test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqID := r.URL.Query().Get("id")
+		if reqID == "" {
+			reqID = fmt.Sprintf("%d", time.Now().UnixNano())
+		}
+		cardinalityCounter.Add(r.Context(), 1, attribute.String("request_id", reqID))
+		w.WriteHeader(http.StatusOK)
 	}))
 
 	// Health endpoint for e2e assertions.

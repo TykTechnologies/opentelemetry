@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
@@ -396,4 +397,62 @@ func TestNewProvider_WithReader_ForceFlush(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	assert.NoError(t, provider.ForceFlush(context.Background()))
+}
+
+func TestNewProvider_WithCardinalityLimit(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	provider, err := NewProvider(
+		WithContext(context.Background()),
+		WithConfig(&config.MetricsConfig{
+			CardinalityLimit: 100,
+		}),
+		WithReader(reader),
+	)
+	assert.NoError(t, err)
+	assert.NotNil(t, provider)
+	assert.Equal(t, OtelProvider, provider.Type())
+	assert.True(t, provider.Enabled())
+	assert.NoError(t, provider.Shutdown(context.Background()))
+}
+
+func TestNewProvider_WithCardinalityLimit_CapsDataPoints(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	limit := 5
+	provider, err := NewProvider(
+		WithContext(context.Background()),
+		WithConfig(&config.MetricsConfig{
+			CardinalityLimit: limit,
+		}),
+		WithReader(reader),
+	)
+	assert.NoError(t, err)
+
+	counter, err := provider.NewCounter("test.capped_counter", "counter with cardinality cap", "1")
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Record more unique attribute combinations than the limit allows.
+	for i := 0; i < limit*3; i++ {
+		counter.Add(ctx, 1, attribute.String("key", fmt.Sprintf("val-%d", i)))
+	}
+
+	var rm metricdata.ResourceMetrics
+	assert.NoError(t, reader.Collect(ctx, &rm))
+
+	var dataPoints int
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name == "test.capped_counter" {
+				sum, ok := m.Data.(metricdata.Sum[int64])
+				assert.True(t, ok)
+				dataPoints = len(sum.DataPoints)
+			}
+		}
+	}
+
+	// The SDK caps at CardinalityLimit + 1 (the overflow data point).
+	assert.LessOrEqual(t, dataPoints, limit+1,
+		"expected at most %d data points (limit + overflow), got %d", limit+1, dataPoints)
+	assert.Greater(t, dataPoints, 0, "expected at least one data point")
 }

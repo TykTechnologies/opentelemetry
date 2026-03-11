@@ -206,6 +206,7 @@ func TestMetricsConfig_SetDefaults(t *testing.T) {
 					MaxInterval:     30000,
 					MaxElapsedTime:  60000,
 				},
+				CardinalityLimit: 2000,
 			},
 		},
 		{
@@ -225,6 +226,7 @@ func TestMetricsConfig_SetDefaults(t *testing.T) {
 					MaxInterval:     10000,
 					MaxElapsedTime:  30000,
 				},
+				CardinalityLimit: 5000,
 			},
 			expected: MetricsConfig{
 				Enabled: ptr(true),
@@ -243,6 +245,7 @@ func TestMetricsConfig_SetDefaults(t *testing.T) {
 					MaxInterval:     10000,
 					MaxElapsedTime:  30000,
 				},
+				CardinalityLimit: 5000,
 			},
 		},
 	}

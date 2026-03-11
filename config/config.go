@@ -96,6 +96,11 @@ type MetricsConfig struct {
 
 	// Retry configuration for exporter failures.
 	Retry MetricsRetryConfig `json:"retry"`
+
+	// CardinalityLimit sets the maximum number of unique attribute combinations
+	// (data points) allowed per metric instrument.
+	// Zero or negative means no limit. Defaults to 2000.
+	CardinalityLimit int `json:"cardinality_limit"`
 }
 
 // MetricsRetryConfig configures retry behavior for metric export failures.
@@ -289,6 +294,10 @@ func (c *MetricsConfig) SetDefaults() {
 
 	if c.ShutdownTimeout == 0 {
 		c.ShutdownTimeout = 30
+	}
+
+	if c.CardinalityLimit == 0 {
+		c.CardinalityLimit = 2000
 	}
 
 	c.Retry.SetDefaults()
