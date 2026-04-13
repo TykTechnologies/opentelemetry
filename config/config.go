@@ -25,16 +25,21 @@ type ExporterConfig struct {
 }
 
 type OpenTelemetry struct {
+	// Deprecated: Use opentelemetry.traces.enabled instead.
 	// A flag that can be used to enable or disable the trace exporter.
 	Enabled bool `json:"enabled"`
+	// Deprecated: Use the corresponding opentelemetry.traces fields instead.
 	// Shared exporter/transport configuration.
 	ExporterConfig `json:",inline"`
+	// Deprecated: Use opentelemetry.traces.span_processor_type instead.
 	// Type of the span processor to use. Valid values are "simple" or "batch".
 	// Defaults to "batch".
 	SpanProcessorType string `json:"span_processor_type"`
+	// Deprecated: Use opentelemetry.traces.span_batch_config instead.
 	// Configuration for the batch span processor.
 	// Only applies when SpanProcessorType is "batch".
 	SpanBatchConfig SpanBatchConfig `json:"span_batch_config"`
+	// Deprecated: Use opentelemetry.traces.context_propagation instead.
 	// Type of the context propagator to use. Valid values are:
 	// - "tracecontext": tracecontext is a propagator that supports the W3C
 	// Trace Context format (https://www.w3.org/TR/trace-context/).
@@ -44,6 +49,7 @@ type OpenTelemetry struct {
 	//   and writes to both custom and standard headers.
 	// Defaults to "tracecontext".
 	ContextPropagation string `json:"context_propagation"`
+	// Deprecated: Use opentelemetry.traces.custom_trace_header instead.
 	// Name of custom header to use for trace ID instead of standard "traceparent".
 	// When set with context_propagation="custom", the gateway will extract trace context
 	// from this header and propagate it using the same custom header.
@@ -67,6 +73,7 @@ type OpenTelemetry struct {
 	// trace ID consistency between the custom header and the reported trace, always send
 	// a valid OpenTelemetry Trace ID or UUID.
 	CustomTraceHeader string `json:"custom_trace_header"`
+	// Deprecated: Use opentelemetry.traces.sampling instead.
 	// Defines the configurations to use in the sampler.
 	Sampling Sampling `json:"sampling"`
 }
