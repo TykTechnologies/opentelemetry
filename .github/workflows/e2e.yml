@@ -1,25 +1,40 @@
-name: CI tests
+name: E2E tests
 
 on:
   pull_request:
   push:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
 jobs:
+  dep-guard:
+    uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@d3fa20888fa2878e877e22bb7702141217290e7c # main
+    permissions:
+      contents: read
+
   e2e:
     name: e2e
+    needs: [dep-guard]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 2
       - name: Install Task
-        uses: arduino/setup-task@v2
+        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2
         with:
           version: 3
       - name: Setup Golang
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: 1.24.0
       - name: Setup e2e
@@ -32,18 +47,21 @@ jobs:
 
   e2e-metrics:
     name: e2e-metrics
+    needs: [dep-guard]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 2
       - name: Install Task
-        uses: arduino/setup-task@v2
+        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2
         with:
           version: 3
       - name: Setup Golang
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: 1.24.0
       - name: Run e2e metrics tests
