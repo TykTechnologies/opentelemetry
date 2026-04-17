@@ -28,7 +28,7 @@ func TestGetSampler(t *testing.T) {
 				"remoteParentNotSampled:AlwaysOffSampler,localParentSampled:AlwaysOnSampler," +
 				"localParentNotSampled:AlwaysOffSampler}"},
 		{"TraceIDRatioBased-0.5", "TraceIDRatioBased", 0.5, false, "TraceIDRatioBased{0.5}"},
-		{"TraceIDRatioBased-1", "TraceIDRatioBased", 1, false, "AlwaysOnSampler"},
+		{"TraceIDRatioBased-1", "TraceIDRatioBased", 1, false, "TraceIDRatioBased{1}"},
 		{"Invalid", "Invalid", 0, false, "AlwaysOnSampler"},
 	}
 
