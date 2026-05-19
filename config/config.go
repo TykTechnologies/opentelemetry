@@ -140,14 +140,10 @@ type TLS struct {
 	// Path to the key file.
 	KeyFile string `json:"key_file"`
 	// Maximum TLS version negotiated with the OpenTelemetry collector.
-	// Options: ["1.0", "1.1", "1.2", "1.3"]. When unset, Tyk applies "1.3"
-	// as the default (this is enforced by Tyk, not inherited from Go's
-	// `crypto/tls` package).
+	// Options: ["1.0", "1.1", "1.2", "1.3"]. Defaults to "1.3".
 	MaxVersion string `json:"max_version"`
 	// Minimum TLS version negotiated with the OpenTelemetry collector.
-	// Options: ["1.0", "1.1", "1.2", "1.3"]. When unset, Tyk applies "1.2"
-	// as the default (this is enforced by Tyk, not inherited from Go's
-	// `crypto/tls` package).
+	// Options: ["1.0", "1.1", "1.2", "1.3"]. Defaults to "1.2".
 	MinVersion string `json:"min_version"`
 }
 
