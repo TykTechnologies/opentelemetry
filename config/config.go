@@ -139,11 +139,13 @@ type TLS struct {
 	CertFile string `json:"cert_file"`
 	// Path to the key file.
 	KeyFile string `json:"key_file"`
-	// Maximum TLS version negotiated with the OpenTelemetry collector.
-	// Options: ["1.0", "1.1", "1.2", "1.3"]. Defaults to "1.3".
+	// Maximum TLS version that is supported.
+	// Options: ["1.0", "1.1", "1.2", "1.3"].
+	// Defaults to "1.3".
 	MaxVersion string `json:"max_version"`
-	// Minimum TLS version negotiated with the OpenTelemetry collector.
-	// Options: ["1.0", "1.1", "1.2", "1.3"]. Defaults to "1.2".
+	// Minimum TLS version that is supported.
+	// Options: ["1.0", "1.1", "1.2", "1.3"].
+	// Defaults to "1.2".
 	MinVersion string `json:"min_version"`
 }
 
