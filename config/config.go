@@ -16,12 +16,13 @@ type ExporterConfig struct {
 	// Timeout for establishing a connection to the collector.
 	// Defaults to 1 second.
 	ConnectionTimeout int `json:"connection_timeout"`
-	// Service name reported as the OpenTelemetry resource. This identifies the
-	// Tyk Gateway instance in the collected traces and metrics, and typically
-	// appears as `service.name` in backends such as Jaeger, Tempo or Prometheus.
+	// The "Resource" or "Service" Name that will be assigned to the Gateway in
+	// traces and metrics. This is used to identify OpenTelemetry data generated
+	// by Tyk Gateway. It typically appears as `service.name` in backends
+	// such as Jaeger, Tempo or Prometheus.
 	// Defaults to "tyk".
 	ResourceName string `json:"resource_name"`
-	// TLS configuration for the exporter.
+	// TLS configuration used by the exporter to authenticate the OpenTelemetry collector
 	TLS TLS `json:"tls"`
 }
 
@@ -127,13 +128,13 @@ type TLS struct {
 	// Set this to `true` to enable TLS for the connection to the OpenTelemetry
 	// collector. Defaults to false.
 	Enable bool `json:"enable"`
-	// Flag that can be used to skip TLS verification if TLS is enabled.
+	// Set to `true` to disable verification of the server’s certificate chain. Not recommended for production environments.
 	// Defaults to false.
 	InsecureSkipVerify bool `json:"insecure_skip_verify"`
 	// Filesystem path to a PEM-encoded CA certificate used to verify the
 	// OpenTelemetry collector's TLS certificate. Only filesystem paths are
-	// accepted; certificate IDs from the Tyk certificate store are not
-	// supported here.
+	// accepted; certificate IDs from the Tyk Certificate Store are not
+	// supported.
 	CAFile string `json:"ca_file"`
 	// Path to the cert file.
 	CertFile string `json:"cert_file"`
