@@ -4,10 +4,9 @@ package config
 // It is embedded by both OpenTelemetry (traces) and MetricsConfig (metrics)
 // so each can target a different collector independently.
 type ExporterConfig struct {
-	// The type of the exporter to sending data in OTLP protocol.
-	// This should be set to the same type of the OpenTelemetry collector.
-	// Valid values are "grpc", or "http".
-	// Defaults to "grpc".
+	// Transport used to send telemetry data to the OpenTelemetry collector
+	// over OTLP. Must match the protocol the collector is configured to accept.
+	// Valid values are "grpc" or "http". Defaults to "grpc".
 	Exporter string `json:"exporter"`
 	// OpenTelemetry collector endpoint to connect to.
 	// Defaults to "localhost:4317".
@@ -17,15 +16,20 @@ type ExporterConfig struct {
 	// Timeout for establishing a connection to the collector.
 	// Defaults to 1 second.
 	ConnectionTimeout int `json:"connection_timeout"`
-	// Name of the resource that will be used to identify the resource.
+	// The "Resource" or "Service" Name that will be assigned to the Gateway in
+	// traces and metrics. This is used to identify OpenTelemetry data generated
+	// by Tyk Gateway. It typically appears as `service.name` in backends
+	// such as Jaeger, Tempo or Prometheus.
 	// Defaults to "tyk".
 	ResourceName string `json:"resource_name"`
-	// TLS configuration for the exporter.
+	// TLS configuration used by the exporter to authenticate the OpenTelemetry collector
 	TLS TLS `json:"tls"`
 }
 
 type OpenTelemetry struct {
-	// A flag that can be used to enable or disable the trace exporter.
+	// Set this to `true` to enable OpenTelemetry tracing on the Gateway.
+	// When enabled, the Gateway exports spans to the configured OpenTelemetry
+	// collector. Defaults to false.
 	Enabled bool `json:"enabled"`
 	// Shared exporter/transport configuration.
 	ExporterConfig `json:",inline"`
@@ -121,12 +125,16 @@ type MetricsRetryConfig struct {
 }
 
 type TLS struct {
-	// Flag that can be used to enable TLS. Defaults to false (disabled).
+	// Set this to `true` to enable TLS for the connection to the OpenTelemetry
+	// collector. Defaults to false.
 	Enable bool `json:"enable"`
-	// Flag that can be used to skip TLS verification if TLS is enabled.
+	// Set to `true` to disable verification of the server’s certificate chain. Not recommended for production environments.
 	// Defaults to false.
 	InsecureSkipVerify bool `json:"insecure_skip_verify"`
-	// Path to the CA file.
+	// Filesystem path to a PEM-encoded CA certificate used to verify the
+	// OpenTelemetry collector's TLS certificate. Only filesystem paths are
+	// accepted; certificate IDs from the Tyk Certificate Store are not
+	// supported.
 	CAFile string `json:"ca_file"`
 	// Path to the cert file.
 	CertFile string `json:"cert_file"`
