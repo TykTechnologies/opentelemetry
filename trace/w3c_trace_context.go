@@ -12,9 +12,10 @@ const (
 	w3cTraceStateKey  = "tracestate"
 )
 
-// ExtractW3CTraceContext installs a W3C traceparent/tracestate (e.g. carried in
-// a request body rather than the HTTP header) as the active remote span context,
-// so later spans join that trace. Always W3C, ignoring the configured propagator.
+// ExtractW3CTraceContext installs an explicit W3C traceparent/tracestate
+// (carried somewhere other than the HTTP header) as the active remote span
+// context, so later spans join that trace. Always W3C, ignoring the configured
+// propagator.
 func ExtractW3CTraceContext(ctx context.Context, traceParent, traceState string) context.Context {
 	carrier := propagation.MapCarrier{w3cTraceParentKey: traceParent}
 	if traceState != "" {
