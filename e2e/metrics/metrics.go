@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -39,6 +40,7 @@ func main() {
 		Temporality:      "cumulative",
 		CardinalityLimit: 5,
 	}
+
 
 	log.Println("Initializing OpenTelemetry metrics at e2e-metrics:", cfg.Endpoint)
 
@@ -85,6 +87,51 @@ func main() {
 	cardinalityCounter, err := provider.NewCounter("e2e.cardinality.requests", "Counter for cardinality overflow test", "1")
 	if err != nil {
 		log.Printf("error creating cardinality counter: %s", err.Error())
+		return
+	}
+
+	// Observable (async) instruments — values are pulled by callback on every
+	// export cycle (every ExportInterval seconds).
+	appStart := time.Now()
+	var obsCollections atomic.Int64
+
+	if _, err := provider.NewObservableCounter(
+		"e2e.observable.collections.total",
+		"Number of metric collection cycles observed via callback",
+		"1",
+		func(_ context.Context, observe metric.Int64Observer) error {
+			observe(obsCollections.Add(1), attribute.String("source", "callback"))
+			return nil
+		},
+	); err != nil {
+		log.Printf("error creating observable counter: %s", err.Error())
+		return
+	}
+
+	if _, err := provider.NewObservableGauge(
+		"e2e.observable.uptime.seconds",
+		"Process uptime observed via callback",
+		"s",
+		func(_ context.Context, observe metric.Float64Observer) error {
+			observe(time.Since(appStart).Seconds(), attribute.String("source", "callback"))
+			return nil
+		},
+	); err != nil {
+		log.Printf("error creating observable gauge: %s", err.Error())
+		return
+	}
+
+	if _, err := provider.NewObservableUpDownCounter(
+		"e2e.observable.queue.depth",
+		"Simulated queue depth observed via callback (oscillates, may go negative)",
+		"1",
+		func(_ context.Context, observe metric.Int64Observer) error {
+			// Oscillates between -5 and +4 — proves non-monotonic semantics end to end.
+			observe((obsCollections.Load()%10)-5, attribute.String("source", "callback"))
+			return nil
+		},
+	); err != nil {
+		log.Printf("error creating observable up-down counter: %s", err.Error())
 		return
 	}
 

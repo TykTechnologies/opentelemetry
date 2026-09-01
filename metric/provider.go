@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -74,6 +75,25 @@ type Provider interface {
 	// Use up-down counters for values that can increase or decrease, like active connections.
 	// Returns a nil-safe UpDownCounter that can be used even if the provider is disabled.
 	NewUpDownCounter(name, description, unit string) (*UpDownCounter, error)
+	// NewObservableCounter creates a new observable (async) counter with the given
+	// name, description, and unit. The callback is invoked on every collection cycle
+	// and must report the current cumulative value via the provided observer.
+	// Returns a nil-safe ObservableCounter; on a disabled provider the callback is
+	// never registered or invoked.
+	NewObservableCounter(name, description, unit string, callback Int64Callback) (*ObservableCounter, error)
+	// NewObservableGauge creates a new observable (async) gauge with the given
+	// name, description, and unit. The callback is invoked on every collection cycle
+	// and must report the current value via the provided observer.
+	// Returns a nil-safe ObservableGauge; on a disabled provider the callback is
+	// never registered or invoked.
+	NewObservableGauge(name, description, unit string, callback Float64Callback) (*ObservableGauge, error)
+	// NewObservableUpDownCounter creates a new observable (async) up-down counter
+	// with the given name, description, and unit. The callback is invoked on every
+	// collection cycle and must report the current cumulative value (which may go
+	// up or down) via the provided observer.
+	// Returns a nil-safe ObservableUpDownCounter; on a disabled provider the
+	// callback is never registered or invoked.
+	NewObservableUpDownCounter(name, description, unit string, callback Int64Callback) (*ObservableUpDownCounter, error)
 
 	// Healthy returns whether the exporter is healthy (last export succeeded).
 	Healthy() bool
@@ -450,5 +470,122 @@ func (mp *meterProvider) NewUpDownCounter(name, description, unit string) (*UpDo
 	return &UpDownCounter{
 		counter: counter,
 		enabled: true,
+	}, nil
+}
+
+func (mp *meterProvider) NewObservableCounter(name, description, unit string, callback Int64Callback) (*ObservableCounter, error) {
+	if !mp.enabled {
+		return &ObservableCounter{enabled: false}, nil
+	}
+
+	if callback == nil {
+		return nil, fmt.Errorf("observable counter %q: callback must not be nil", name)
+	}
+
+	meter := mp.Meter()
+
+	observable, err := meter.Int64ObservableCounter(
+		name,
+		otelmetric.WithDescription(description),
+		otelmetric.WithUnit(unit),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	registration, err := meter.RegisterCallback(
+		func(ctx context.Context, obs otelmetric.Observer) error {
+			return callback(ctx, func(value int64, attrs ...attribute.KeyValue) {
+				obs.ObserveInt64(observable, value, otelmetric.WithAttributes(attrs...))
+			})
+		},
+		observable,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ObservableCounter{
+		observable:   observable,
+		registration: registration,
+		enabled:      true,
+	}, nil
+}
+
+func (mp *meterProvider) NewObservableGauge(name, description, unit string, callback Float64Callback) (*ObservableGauge, error) {
+	if !mp.enabled {
+		return &ObservableGauge{enabled: false}, nil
+	}
+
+	if callback == nil {
+		return nil, fmt.Errorf("observable gauge %q: callback must not be nil", name)
+	}
+
+	meter := mp.Meter()
+
+	observable, err := meter.Float64ObservableGauge(
+		name,
+		otelmetric.WithDescription(description),
+		otelmetric.WithUnit(unit),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	registration, err := meter.RegisterCallback(
+		func(ctx context.Context, obs otelmetric.Observer) error {
+			return callback(ctx, func(value float64, attrs ...attribute.KeyValue) {
+				obs.ObserveFloat64(observable, value, otelmetric.WithAttributes(attrs...))
+			})
+		},
+		observable,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ObservableGauge{
+		observable:   observable,
+		registration: registration,
+		enabled:      true,
+	}, nil
+}
+
+func (mp *meterProvider) NewObservableUpDownCounter(name, description, unit string, callback Int64Callback) (*ObservableUpDownCounter, error) {
+	if !mp.enabled {
+		return &ObservableUpDownCounter{enabled: false}, nil
+	}
+
+	if callback == nil {
+		return nil, fmt.Errorf("observable up-down counter %q: callback must not be nil", name)
+	}
+
+	meter := mp.Meter()
+
+	observable, err := meter.Int64ObservableUpDownCounter(
+		name,
+		otelmetric.WithDescription(description),
+		otelmetric.WithUnit(unit),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	registration, err := meter.RegisterCallback(
+		func(ctx context.Context, obs otelmetric.Observer) error {
+			return callback(ctx, func(value int64, attrs ...attribute.KeyValue) {
+				obs.ObserveInt64(observable, value, otelmetric.WithAttributes(attrs...))
+			})
+		},
+		observable,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ObservableUpDownCounter{
+		observable:   observable,
+		registration: registration,
+		enabled:      true,
 	}, nil
 }

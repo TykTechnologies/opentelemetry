@@ -14,7 +14,7 @@ import (
 
 const (
 	appURL        = "http://localhost:8081"
-	prometheusURL = "http://localhost:8889/metrics"
+	prometheusURL = "http://localhost:18889/metrics"
 
 	// startupTimeout is how long to wait for the stack to become healthy.
 	startupTimeout = 60 * time.Second
@@ -198,6 +198,84 @@ func TestCardinalityOverflow(t *testing.T) {
 	}
 
 	t.Logf("cardinality test: %d series, overflow=%v, total_count=%v", seriesCount, hasOverflow, totalCount)
+}
+
+// promSeriesValue returns the value of the first series whose name matches
+// exactly (label block or bare), e.g. `e2e_observable_collections_total{...} 42`.
+func promSeriesValue(t *testing.T, body, name string) (float64, bool) {
+	t.Helper()
+	for _, line := range strings.Split(body, "\n") {
+		if !strings.HasPrefix(line, name+"{") && !strings.HasPrefix(line, name+" ") {
+			continue
+		}
+		parts := strings.Fields(line)
+		if len(parts) < 2 {
+			continue
+		}
+		var val float64
+		if _, err := fmt.Sscanf(parts[len(parts)-1], "%f", &val); err != nil {
+			continue
+		}
+		return val, true
+	}
+	return 0, false
+}
+
+func TestPrometheusObservableMetrics(t *testing.T) {
+	waitForHealthy(t)
+
+	// Wait for at least one export cycle so every observable has been collected once.
+	time.Sleep(exportInterval + 3*time.Second)
+	body1 := fetchPrometheus(t)
+
+	// Type assertions: monotonic counter, gauge, non-monotonic sum (rendered as gauge).
+	typeChecks := []struct{ line, kind string }{
+		{"# TYPE e2e_observable_collections_total counter", "ObservableCounter"},
+		{"# TYPE e2e_observable_uptime_seconds gauge", "ObservableGauge"},
+		{"# TYPE e2e_observable_queue_depth gauge", "ObservableUpDownCounter (non-monotonic sum)"},
+	}
+	for _, tc := range typeChecks {
+		if !strings.Contains(body1, tc.line) {
+			t.Errorf("prometheus output missing %q (%s)", tc.line, tc.kind)
+		}
+	}
+
+	counter1, ok := promSeriesValue(t, body1, "e2e_observable_collections_total")
+	if !ok {
+		t.Fatal("e2e_observable_collections_total series not found")
+	}
+	uptime1, ok := promSeriesValue(t, body1, "e2e_observable_uptime_seconds")
+	if !ok {
+		t.Fatal("e2e_observable_uptime_seconds series not found")
+	}
+	if _, ok := promSeriesValue(t, body1, "e2e_observable_queue_depth"); !ok {
+		t.Fatal("e2e_observable_queue_depth series not found")
+	}
+
+	// Callback attribute must be exported as a label.
+	if !strings.Contains(body1, `source="callback"`) {
+		t.Error("prometheus output missing source=\"callback\" label on observable series")
+	}
+
+	// Values must update across export intervals: the callback fires per collection.
+	time.Sleep(2*exportInterval + 3*time.Second)
+	body2 := fetchPrometheus(t)
+
+	counter2, ok := promSeriesValue(t, body2, "e2e_observable_collections_total")
+	if !ok {
+		t.Fatal("e2e_observable_collections_total series not found on second scrape")
+	}
+	if counter2 <= counter1 {
+		t.Errorf("observable counter did not increase across export intervals: %v -> %v", counter1, counter2)
+	}
+
+	uptime2, ok := promSeriesValue(t, body2, "e2e_observable_uptime_seconds")
+	if !ok {
+		t.Fatal("e2e_observable_uptime_seconds series not found on second scrape")
+	}
+	if uptime2 <= uptime1 {
+		t.Errorf("observable gauge did not report a newer value: %v -> %v", uptime1, uptime2)
+	}
 }
 
 // helpers
