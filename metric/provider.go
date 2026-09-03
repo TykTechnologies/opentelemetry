@@ -506,7 +506,6 @@ func (mp *meterProvider) NewObservableCounter(name, description, unit string, ca
 	}
 
 	return &ObservableCounter{
-		observable:   observable,
 		registration: registration,
 		enabled:      true,
 	}, nil
@@ -545,7 +544,6 @@ func (mp *meterProvider) NewObservableGauge(name, description, unit string, call
 	}
 
 	return &ObservableGauge{
-		observable:   observable,
 		registration: registration,
 		enabled:      true,
 	}, nil
@@ -584,7 +582,6 @@ func (mp *meterProvider) NewObservableUpDownCounter(name, description, unit stri
 	}
 
 	return &ObservableUpDownCounter{
-		observable:   observable,
 		registration: registration,
 		enabled:      true,
 	}, nil

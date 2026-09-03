@@ -111,7 +111,6 @@ type Int64Callback func(ctx context.Context, observe Int64Observer) error
 // Use it for monotonically increasing values read from an external source,
 // like total page faults or total bytes read from the OS.
 type ObservableCounter struct {
-	observable   otelmetric.Int64ObservableCounter
 	registration otelmetric.Registration
 	enabled      bool
 
@@ -150,7 +149,6 @@ type Float64Callback func(ctx context.Context, observe Float64Observer) error
 // Float64ObservableGauge. The current value is reported by a callback on every
 // collection cycle. Use it for sampled values like memory usage or CPU load.
 type ObservableGauge struct {
-	observable   otelmetric.Float64ObservableGauge
 	registration otelmetric.Registration
 	enabled      bool
 
@@ -181,7 +179,6 @@ func (o *ObservableGauge) Unregister() error {
 // queue read from an external source. It exports a non-monotonic Sum equal to
 // the last observed value per attribute set.
 type ObservableUpDownCounter struct {
-	observable   otelmetric.Int64ObservableUpDownCounter
 	registration otelmetric.Registration
 	enabled      bool
 
