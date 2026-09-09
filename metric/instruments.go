@@ -2,6 +2,7 @@ package metric
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -92,6 +93,114 @@ func (u *UpDownCounter) Add(ctx context.Context, value int64, attrs ...attribute
 // Enabled returns whether the up-down counter is enabled and recording.
 func (u *UpDownCounter) Enabled() bool {
 	return u != nil && u.enabled
+}
+
+// Int64Observer records a single int64 observation with optional attributes.
+// It is passed to Int64Callback on every collection cycle.
+type Int64Observer func(value int64, attrs ...attribute.KeyValue)
+
+// Int64Callback is invoked by the SDK once per collection cycle for
+// int64-valued observable instruments. Returning an error surfaces it through
+// the SDK's error path (the provider's error handler/logger) without breaking
+// subsequent collections.
+type Int64Callback func(ctx context.Context, observe Int64Observer) error
+
+// ObservableCounter is a nil-safe wrapper around an OpenTelemetry
+// Int64ObservableCounter. Values are reported by a callback on every
+// collection cycle instead of synchronous Add calls.
+// Use it for monotonically increasing values read from an external source,
+// like total page faults or total bytes read from the OS.
+type ObservableCounter struct {
+	registration otelmetric.Registration
+	enabled      bool
+
+	unregisterOnce sync.Once
+	unregisterErr  error
+}
+
+// Enabled returns whether the observable counter is enabled and recording.
+func (o *ObservableCounter) Enabled() bool {
+	return o != nil && o.enabled
+}
+
+// Unregister stops the callback from being invoked on future collections.
+// It is safe to call on a nil or disabled ObservableCounter and is idempotent.
+func (o *ObservableCounter) Unregister() error {
+	if o == nil || !o.enabled || o.registration == nil {
+		return nil
+	}
+	o.unregisterOnce.Do(func() {
+		o.unregisterErr = o.registration.Unregister()
+	})
+	return o.unregisterErr
+}
+
+// Float64Observer records a single float64 observation with optional attributes.
+// It is passed to Float64Callback on every collection cycle.
+type Float64Observer func(value float64, attrs ...attribute.KeyValue)
+
+// Float64Callback is invoked by the SDK once per collection cycle for
+// float64-valued observable instruments. Returning an error surfaces it through
+// the SDK's error path (the provider's error handler/logger) without breaking
+// subsequent collections.
+type Float64Callback func(ctx context.Context, observe Float64Observer) error
+
+// ObservableGauge is a nil-safe wrapper around an OpenTelemetry
+// Float64ObservableGauge. The current value is reported by a callback on every
+// collection cycle. Use it for sampled values like memory usage or CPU load.
+type ObservableGauge struct {
+	registration otelmetric.Registration
+	enabled      bool
+
+	unregisterOnce sync.Once
+	unregisterErr  error
+}
+
+// Enabled returns whether the observable gauge is enabled and recording.
+func (o *ObservableGauge) Enabled() bool {
+	return o != nil && o.enabled
+}
+
+// Unregister stops the callback from being invoked on future collections.
+// It is safe to call on a nil or disabled ObservableGauge and is idempotent.
+func (o *ObservableGauge) Unregister() error {
+	if o == nil || !o.enabled || o.registration == nil {
+		return nil
+	}
+	o.unregisterOnce.Do(func() {
+		o.unregisterErr = o.registration.Unregister()
+	})
+	return o.unregisterErr
+}
+
+// ObservableUpDownCounter is a nil-safe wrapper around an OpenTelemetry
+// Int64ObservableUpDownCounter. The current cumulative value is reported by a
+// callback on every collection cycle and may go up or down, like the size of a
+// queue read from an external source. It exports a non-monotonic Sum equal to
+// the last observed value per attribute set.
+type ObservableUpDownCounter struct {
+	registration otelmetric.Registration
+	enabled      bool
+
+	unregisterOnce sync.Once
+	unregisterErr  error
+}
+
+// Enabled returns whether the observable up-down counter is enabled and recording.
+func (o *ObservableUpDownCounter) Enabled() bool {
+	return o != nil && o.enabled
+}
+
+// Unregister stops the callback from being invoked on future collections.
+// It is safe to call on a nil or disabled ObservableUpDownCounter and is idempotent.
+func (o *ObservableUpDownCounter) Unregister() error {
+	if o == nil || !o.enabled || o.registration == nil {
+		return nil
+	}
+	o.unregisterOnce.Do(func() {
+		o.unregisterErr = o.registration.Unregister()
+	})
+	return o.unregisterErr
 }
 
 // DefaultLatencyBuckets provides default bucket boundaries for latency histograms

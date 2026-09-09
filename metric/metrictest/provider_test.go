@@ -2,10 +2,12 @@ package metrictest_test
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
 
+	"github.com/TykTechnologies/opentelemetry/metric"
 	"github.com/TykTechnologies/opentelemetry/metric/metrictest"
 )
 
@@ -198,4 +200,103 @@ func TestParallelProviders(t *testing.T) {
 		m := tp.FindMetric(t, "parallel.b")
 		metrictest.AssertSum(t, m, int64(20))
 	})
+}
+
+func TestObservableCounter_CollectTriggersCallback(t *testing.T) {
+	tp := metrictest.NewProvider(t)
+
+	var source atomic.Int64
+	source.Store(7)
+	obs, err := tp.NewObservableCounter("test.obs.counter", "An observable counter", "1",
+		func(_ context.Context, observe metric.Int64Observer) error {
+			observe(source.Load(), attribute.String("shard", "a"))
+			return nil
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !obs.Enabled() {
+		t.Fatal("expected observable counter to be enabled")
+	}
+
+	m := tp.FindMetric(t, "test.obs.counter")
+	metrictest.AssertSum(t, m, int64(7))
+	metrictest.AssertSumWithAttrs(t, m, int64(7), attribute.String("shard", "a"))
+
+	// Callback fires on every Collect: a changed source is visible on re-collection.
+	source.Store(11)
+	m = tp.FindMetric(t, "test.obs.counter")
+	metrictest.AssertSum(t, m, int64(11))
+}
+
+func TestObservableGauge_CollectTriggersCallback(t *testing.T) {
+	tp := metrictest.NewProvider(t)
+
+	var source atomic.Int64
+	source.Store(64)
+	_, err := tp.NewObservableGauge("test.obs.gauge", "An observable gauge", "1",
+		func(_ context.Context, observe metric.Float64Observer) error {
+			observe(float64(source.Load()), attribute.String("pool", "redis"))
+			return nil
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := tp.FindMetric(t, "test.obs.gauge")
+	metrictest.AssertGauge(t, m, 64.0)
+	metrictest.AssertHasAttributes(t, m, attribute.String("pool", "redis"))
+
+	source.Store(32)
+	m = tp.FindMetric(t, "test.obs.gauge")
+	metrictest.AssertGauge(t, m, 32.0)
+}
+
+func TestObservableUpDownCounter_CollectTriggersCallback(t *testing.T) {
+	tp := metrictest.NewProvider(t)
+
+	var source atomic.Int64
+	source.Store(-3) // negative: proves non-monotonic Sum works through AssertSum
+	_, err := tp.NewObservableUpDownCounter("test.obs.updown", "An observable up-down counter", "1",
+		func(_ context.Context, observe metric.Int64Observer) error {
+			observe(source.Load())
+			return nil
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := tp.FindMetric(t, "test.obs.updown")
+	metrictest.AssertSum(t, m, int64(-3))
+
+	source.Store(5)
+	m = tp.FindMetric(t, "test.obs.updown")
+	metrictest.AssertSum(t, m, int64(5))
+}
+
+func TestObservable_UnregisterStopsCollection(t *testing.T) {
+	tp := metrictest.NewProvider(t)
+
+	var calls atomic.Int64
+	obs, err := tp.NewObservableCounter("test.obs.unreg", "An observable counter", "1",
+		func(_ context.Context, observe metric.Int64Observer) error {
+			observe(calls.Add(1))
+			return nil
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tp.Collect()
+	if calls.Load() != 1 {
+		t.Fatalf("expected 1 callback invocation, got %d", calls.Load())
+	}
+
+	if err := obs.Unregister(); err != nil {
+		t.Fatalf("unregister failed: %v", err)
+	}
+	tp.Collect()
+	if calls.Load() != 1 {
+		t.Fatalf("callback fired after Unregister: %d invocations", calls.Load())
+	}
 }
