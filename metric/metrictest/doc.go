@@ -92,8 +92,10 @@
 // instruments but not the code that configures the provider in your own
 // service (identity options, detectors, defaults, error handling). For that,
 // inject a Recorder into your initialisation path and inspect what it built.
-// The consumer test needs only this package, metric, and
-// go.opentelemetry.io/otel/attribute — no direct dependency on the OTel SDK:
+// The consumer test needs only this package and metric — no direct dependency
+// on any go.opentelemetry.io module (build attributes with
+// metric.StringAttribute, metric.IntAttribute, metric.BoolAttribute or
+// metric.NewAttribute):
 //
 //	func TestInitMetrics(t *testing.T) {
 //		rec := metrictest.NewRecorder(t) // wraps a ManualReader; t.Cleanup shuts it down
@@ -112,8 +114,8 @@
 //
 //		// Or typed, subset match.
 //		metrictest.AssertResourceAttributes(t, rec.Collect(),
-//			attribute.String("service.instance.id", nodeID),
-//			attribute.String("tyk.component", "dashboard"),
+//			metric.StringAttribute("service.instance.id", nodeID),
+//			metric.StringAttribute("tyk.component", "dashboard"),
 //		)
 //
 //		// Metrics recorded through the provider your init code returned.

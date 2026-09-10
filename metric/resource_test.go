@@ -2,6 +2,7 @@ package metric
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +19,8 @@ func assertResourceAttr(t *testing.T, res *resource.Resource, key, want string) 
 		t.Errorf("resource attribute %q not found; got %v", key, res.Attributes())
 		return
 	}
-	assert.Equal(t, want, val.AsString(), "resource attribute %q", key)
+	// AsInterface handles every attribute type; AsString would be empty for ints and bools.
+	assert.Equal(t, want, fmt.Sprint(val.AsInterface()), "resource attribute %q", key)
 }
 
 func TestResourceFactory_IgnoresEnvByDefault(t *testing.T) {

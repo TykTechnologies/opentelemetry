@@ -1,16 +1,14 @@
 package metrictest_test
 
-// This file deliberately imports nothing from go.opentelemetry.io/otel/sdk.
-// It proves a consumer can test its own provider initialisation path using
-// only metrictest, metric and the attribute package. Keep the import list
-// minimal; TestRecorder_ConsumerImports guards it.
+// This file deliberately imports nothing from go.opentelemetry.io/otel. It
+// proves a consumer can test its own provider initialisation path using only
+// metrictest and metric (plus the standard library). Keep the import list
+// minimal — that is the point of the file.
 
 import (
 	"context"
 	"sync/atomic"
 	"testing"
-
-	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/TykTechnologies/opentelemetry/metric"
 	"github.com/TykTechnologies/opentelemetry/metric/metrictest"
@@ -25,7 +23,7 @@ func initMetrics(ctx context.Context, nodeID, version string, extra ...metric.Op
 		metric.WithContext(ctx),
 		metric.WithServiceID(nodeID),
 		metric.WithServiceVersion(version),
-		metric.WithCustomResourceAttributes(attribute.String("tyk.component", "dashboard")),
+		metric.WithCustomResourceAttributes(metric.StringAttribute("tyk.component", "dashboard")),
 	}
 	opts = append(opts, extra...)
 
@@ -58,9 +56,9 @@ func TestRecorder_ConsumerInitPath(t *testing.T) {
 
 	// Resource identity, typed.
 	metrictest.AssertResourceAttributes(t, rec.Collect(),
-		attribute.String("service.instance.id", "dash-1"),
-		attribute.String("service.version", "v5.9.0"),
-		attribute.String("tyk.component", "dashboard"),
+		metric.StringAttribute("service.instance.id", "dash-1"),
+		metric.StringAttribute("service.version", "v5.9.0"),
+		metric.StringAttribute("tyk.component", "dashboard"),
 	)
 
 	// Instruments created through the consumer's provider are visible.
@@ -117,8 +115,8 @@ func TestRecorder_ConsumerGaugeAccessors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	requests.Add(ctx, 3, attribute.String("method", "GET"))
-	requests.Add(ctx, 5, attribute.String("method", "POST"))
+	requests.Add(ctx, 3, metric.StringAttribute("method", "GET"))
+	requests.Add(ctx, 5, metric.StringAttribute("method", "POST"))
 
 	values := metrictest.DataPointValues[int64](t, rec.FindMetric(t, "http.requests"))
 	if len(values) != 2 || values[0]+values[1] != 8 {
