@@ -1,9 +1,9 @@
 package trace
 
 import (
-	"fmt"
-
 	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/TykTechnologies/opentelemetry/internal/attributes"
 )
 
 type Attribute = attribute.KeyValue
@@ -18,40 +18,5 @@ type Attribute = attribute.KeyValue
 //	attr := trace.NewAttribute("key1", "value1")
 //	fmt.Println(attr) // Output: "key1":"value1"
 func NewAttribute(key string, value interface{}) Attribute {
-	switch v := value.(type) {
-	case string:
-		return attribute.Key(key).String(v)
-	case *string:
-		return attribute.Key(key).String(*v)
-	case bool:
-		return attribute.Key(key).Bool(v)
-	case *bool:
-		return attribute.Key(key).Bool(*v)
-	case int:
-		return attribute.Key(key).Int(v)
-	case *int:
-		return attribute.Key(key).Int(*v)
-	case int64:
-		return attribute.Key(key).Int64(v)
-	case *int64:
-		return attribute.Key(key).Int64(*v)
-	case float64:
-		return attribute.Key(key).Float64(v)
-	case *float64:
-		return attribute.Key(key).Float64(*v)
-	case []string:
-		return attribute.Key(key).StringSlice(v)
-	case []bool:
-		return attribute.Key(key).BoolSlice(v)
-	case []int:
-		return attribute.Key(key).IntSlice(v)
-	case []int64:
-		return attribute.Key(key).Int64Slice(v)
-	case []float64:
-		return attribute.Key(key).Float64Slice(v)
-	case fmt.Stringer:
-		return attribute.Key(key).String(v.String())
-	default:
-		return attribute.Key(key).String(fmt.Sprint(v))
-	}
+	return attributes.New(key, value)
 }
