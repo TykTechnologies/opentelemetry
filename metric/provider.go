@@ -49,9 +49,15 @@ type ExportStats struct {
 // If misconfigured or disabled, the provider will return a noop meter and
 // instruments that silently do nothing.
 type Provider interface {
-	// Shutdown executes the underlying exporter shutdown function.
+	// Shutdown flushes pending metrics and executes the underlying exporter
+	// shutdown function. The call is bounded by MetricsConfig.ShutdownTimeout
+	// (falling back to ConnectionTimeout) regardless of the caller's context.
 	Shutdown(context.Context) error
-	// ForceFlush immediately exports all pending metrics.
+	// ForceFlush immediately exports all pending metrics. When the caller's
+	// context carries no deadline, the call is bounded by the same timeout as
+	// Shutdown (MetricsConfig.ShutdownTimeout, falling back to
+	// ConnectionTimeout) so a flush against an unreachable collector cannot
+	// hang. A caller-supplied deadline is honoured as-is.
 	ForceFlush(context.Context) error
 	// Meter returns a meter with pre-configured name. It's used to create metrics.
 	Meter() otelmetric.Meter
@@ -117,6 +123,10 @@ type meterProvider struct {
 
 	resources    resourceConfig
 	customReader sdkmetric.Reader // injected reader (e.g. ManualReader for tests)
+
+	// quietInitErrors suppresses the provider's own logging of init failures so
+	// callers that log the returned error do not produce duplicate log lines.
+	quietInitErrors bool
 
 	// Health and stats tracking
 	healthy         atomic.Bool
@@ -210,14 +220,14 @@ func NewProvider(opts ...Option) (Provider, error) {
 	// Create the resource.
 	resource, err := resourceFactory(provider.ctx, provider.cfg.ResourceName, provider.resources)
 	if err != nil {
-		provider.logger.Error("failed to create resource", err)
+		provider.logInitError("failed to create resource", err)
 		return provider, fmt.Errorf("failed to create resource: %w", err)
 	}
 
 	// Create the exporter with retry configuration.
 	exporter, err := exporterFactory(provider.ctx, provider.cfg)
 	if err != nil {
-		provider.logger.Error("failed to create metric exporter", err)
+		provider.logInitError("failed to create metric exporter", err)
 		return provider, fmt.Errorf("failed to create metric exporter: %w", err)
 	}
 
@@ -311,18 +321,40 @@ func (e *statsExporter) ForceFlush(ctx context.Context) error {
 	return e.exporter.ForceFlush(ctx)
 }
 
+// logInitError logs a provider initialisation failure unless
+// WithQuietInitErrors was set. Runtime export errors never go through here.
+func (mp *meterProvider) logInitError(msg string, err error) {
+	if mp.quietInitErrors {
+		return
+	}
+	mp.logger.Error(msg, err)
+}
+
+// shutdownTimeout returns the bound applied to Shutdown and ForceFlush:
+// ShutdownTimeout if configured, otherwise ConnectionTimeout.
+func (mp *meterProvider) shutdownTimeout() time.Duration {
+	timeout := mp.cfg.ShutdownTimeout
+	if timeout == 0 {
+		timeout = mp.cfg.ConnectionTimeout
+	}
+	return time.Duration(timeout) * time.Second
+}
+
+// withDefaultTimeout bounds ctx with timeout only when ctx has no deadline of
+// its own. A caller-supplied deadline is never shortened.
+func withDefaultTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		return context.WithCancel(ctx)
+	}
+	return context.WithTimeout(ctx, timeout)
+}
+
 func (mp *meterProvider) Shutdown(ctx context.Context) error {
 	if mp.providerShutdownFn == nil {
 		return nil
 	}
 
-	// Use ShutdownTimeout if configured, otherwise fall back to ConnectionTimeout.
-	timeout := mp.cfg.ShutdownTimeout
-	if timeout == 0 {
-		timeout = mp.cfg.ConnectionTimeout
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, mp.shutdownTimeout())
 	defer cancel()
 
 	return mp.providerShutdownFn(ctx)
@@ -332,6 +364,10 @@ func (mp *meterProvider) ForceFlush(ctx context.Context) error {
 	if mp.providerForceFlushFn == nil {
 		return nil
 	}
+
+	ctx, cancel := withDefaultTimeout(ctx, mp.shutdownTimeout())
+	defer cancel()
+
 	return mp.providerForceFlushFn(ctx)
 }
 

@@ -86,6 +86,57 @@
 //		)
 //	}
 //
+// # Testing Provider Initialization
+//
+// TestProvider builds a bare provider, which is enough to unit-test
+// instruments but not the code that configures the provider in your own
+// service (identity options, detectors, defaults, error handling). For that,
+// inject a Recorder into your initialisation path and inspect what it built.
+// The consumer test needs only this package, metric, and
+// go.opentelemetry.io/otel/attribute — no direct dependency on the OTel SDK:
+//
+//	func TestInitMetrics(t *testing.T) {
+//		rec := metrictest.NewRecorder(t) // wraps a ManualReader; t.Cleanup shuts it down
+//
+//		// rec.Option() is a metric.Option (metric.WithReader) — pass it through
+//		// your own init function alongside its usual options.
+//		provider, err := myotel.InitMetrics(ctx, logger, cfg, nodeID, rec.Option())
+//		require.NoError(t, err)
+//		require.True(t, provider.Enabled())
+//
+//		// Resource identity as plain strings.
+//		attrs := rec.ResourceAttributes()
+//		assert.Equal(t, "tyk-dashboard", attrs["service.name"])
+//		assert.Equal(t, nodeID, attrs["service.instance.id"])
+//		assert.Equal(t, version, attrs["service.version"])
+//
+//		// Or typed, subset match.
+//		metrictest.AssertResourceAttributes(t, rec.Collect(),
+//			attribute.String("service.instance.id", nodeID),
+//			attribute.String("tyk.component", "dashboard"),
+//		)
+//
+//		// Metrics recorded through the provider your init code returned.
+//		m := rec.FindMetric(t, "process.uptime")
+//		metrictest.AssertGauge(t, m, 12.5)
+//
+//		// Raw metricdata for advanced cases.
+//		rm := rec.Collect()
+//		_ = rm.ScopeMetrics
+//	}
+//
+// Because the reader replaces the exporter, no collector or network is
+// involved, and the reader implies the provider is enabled regardless of
+// cfg.Enabled.
+//
+// # Resource Assertions
+//
+// Both TestProvider and Recorder expose the provider's resource:
+//
+//	attrs := tp.ResourceAttributes() // map[string]string, values via attribute.Value.Emit
+//	metrictest.AssertResourceAttributes(t, tp.Collect(), attribute.String("service.name", "tyk"))
+//	m := metrictest.ResourceAttributeMap(tp.Collect())
+//
 // # Advanced: Raw metricdata Access
 //
 // For complex assertions, use Collect() to get the raw OTel metricdata
@@ -112,7 +163,7 @@
 //
 // # Parallel Tests
 //
-// Each TestProvider is fully isolated — no global state is set.
+// Each TestProvider and Recorder is fully isolated — no global state is set.
 // Safe for use with t.Parallel():
 //
 //	func TestA(t *testing.T) {

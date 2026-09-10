@@ -17,10 +17,21 @@ type resourceConfig struct {
 	withProcess   bool
 
 	customAttrs []Attribute
+
+	// fromEnv adds resource.WithFromEnv() so OTEL_RESOURCE_ATTRIBUTES and
+	// OTEL_SERVICE_NAME are honoured. It is applied first so explicit
+	// attributes win: resource.New merges detectors in order and later values
+	// overwrite earlier ones for the same key.
+	fromEnv bool
 }
 
 func resourceFactory(ctx context.Context, resourceName string, cfg resourceConfig) (*resource.Resource, error) {
 	opts := []resource.Option{}
+
+	// Env attributes go first so anything set explicitly below overrides them.
+	if cfg.fromEnv {
+		opts = append(opts, resource.WithFromEnv())
+	}
 
 	attrs := []attribute.KeyValue{
 		semconv.ServiceNameKey.String(resourceName),

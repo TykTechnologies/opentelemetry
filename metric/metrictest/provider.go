@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"github.com/TykTechnologies/opentelemetry/metric"
@@ -14,9 +13,11 @@ import (
 // It records real metric data that can be collected and asserted on.
 //
 // TestProvider registers a t.Cleanup handler that calls Shutdown automatically.
+// To test your own initialisation code instead of a bare provider, use
+// NewRecorder.
 type TestProvider struct {
 	metric.Provider
-	reader *sdkmetric.ManualReader
+	rec *Recorder
 }
 
 // NewProvider creates a test provider with a ManualReader. No config, no
@@ -28,10 +29,10 @@ type TestProvider struct {
 func NewProvider(t testing.TB) *TestProvider {
 	t.Helper()
 
-	reader := sdkmetric.NewManualReader()
+	rec := NewRecorder(t)
 	provider, err := metric.NewProvider(
 		metric.WithContext(context.Background()),
-		metric.WithReader(reader),
+		rec.Option(),
 	)
 	if err != nil {
 		t.Fatalf("metrictest.NewProvider: %v", err)
@@ -39,7 +40,7 @@ func NewProvider(t testing.TB) *TestProvider {
 
 	tp := &TestProvider{
 		Provider: provider,
-		reader:   reader,
+		rec:      rec,
 	}
 	t.Cleanup(func() {
 		//nolint:errcheck // best-effort cleanup in tests
@@ -55,11 +56,7 @@ func NewProvider(t testing.TB) *TestProvider {
 //	rm := tp.Collect()
 //	// inspect rm.ScopeMetrics directly
 func (tp *TestProvider) Collect() metricdata.ResourceMetrics {
-	var rm metricdata.ResourceMetrics
-	// ManualReader.Collect does not fail under normal test conditions.
-	//nolint:errcheck // intentional — ManualReader.Collect is infallible in tests
-	tp.reader.Collect(context.Background(), &rm)
-	return rm
+	return tp.rec.Collect()
 }
 
 // FindMetric collects metrics and returns the one matching name.
@@ -68,16 +65,7 @@ func (tp *TestProvider) Collect() metricdata.ResourceMetrics {
 //	m := tp.FindMetric(t, "http.server.request.duration")
 func (tp *TestProvider) FindMetric(t testing.TB, name string) metricdata.Metrics {
 	t.Helper()
-	rm := tp.Collect()
-	for _, sm := range rm.ScopeMetrics {
-		for _, m := range sm.Metrics {
-			if m.Name == name {
-				return m
-			}
-		}
-	}
-	t.Fatalf("metric %q not found; recorded: %v", name, tp.MetricNames())
-	return metricdata.Metrics{} // unreachable
+	return tp.rec.FindMetric(t, name)
 }
 
 // MetricNames collects metrics and returns all recorded metric names.
@@ -86,12 +74,14 @@ func (tp *TestProvider) FindMetric(t testing.TB, name string) metricdata.Metrics
 //	names := tp.MetricNames()
 //	// ["http.server.request.duration", "http.server.active_requests", ...]
 func (tp *TestProvider) MetricNames() []string {
-	rm := tp.Collect()
-	var names []string
-	for _, sm := range rm.ScopeMetrics {
-		for _, m := range sm.Metrics {
-			names = append(names, m.Name)
-		}
-	}
-	return names
+	return tp.rec.MetricNames()
+}
+
+// ResourceAttributes returns the provider's resource attributes as strings
+// keyed by attribute name. See ResourceAttributeMap.
+//
+//	attrs := tp.ResourceAttributes()
+//	// attrs["service.name"] == "tyk"
+func (tp *TestProvider) ResourceAttributes() map[string]string {
+	return tp.rec.ResourceAttributes()
 }

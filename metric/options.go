@@ -183,11 +183,57 @@ func WithCustomResourceAttributes(attrs ...Attribute) Option {
 	}
 }
 
+// WithResourceFromEnv adds attributes from the standard OpenTelemetry
+// environment variables (OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME) to
+// the configured resource. Attributes set explicitly through the config or
+// other options (service name, WithServiceID, WithServiceVersion,
+// WithCustomResourceAttributes) take precedence over environment values.
+//
+// Example:
+//
+//	// OTEL_RESOURCE_ATTRIBUTES=deployment.environment=prod
+//	provider, err := metric.NewProvider(metric.WithResourceFromEnv())
+//	if err != nil {
+//		panic(err)
+//	}
+func WithResourceFromEnv() Option {
+	return &opts{
+		fn: func(mp *meterProvider) {
+			mp.resources.fromEnv = true
+		},
+	}
+}
+
+// WithQuietInitErrors stops NewProvider from logging its own initialisation
+// failures (resource or exporter creation) through the configured Logger.
+// The error is still returned, so callers that log it themselves get exactly
+// one log line instead of two. Runtime export failures are still logged.
+//
+// Example:
+//
+//	provider, err := metric.NewProvider(
+//		metric.WithConfig(cfg),
+//		metric.WithLogger(logger),
+//		metric.WithQuietInitErrors(),
+//	)
+//	if err != nil {
+//		logger.Error("metrics disabled: ", err) // the only log line
+//	}
+func WithQuietInitErrors() Option {
+	return &opts{
+		fn: func(mp *meterProvider) {
+			mp.quietInitErrors = true
+		},
+	}
+}
+
 // WithReader injects a custom sdkmetric.Reader into the meter provider.
 // When set, the provider skips exporter creation and uses this reader instead.
 // The custom reader implies metrics are enabled — no WithConfig needed.
 //
-// Most consumers should use metric/metrictest.NewProvider instead.
+// Most tests should use metric/metrictest.NewProvider, or
+// metric/metrictest.NewRecorder to exercise their own initialisation code,
+// instead of importing the OTel SDK directly.
 func WithReader(reader sdkmetric.Reader) Option {
 	return &opts{
 		fn: func(mp *meterProvider) {
