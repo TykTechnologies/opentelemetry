@@ -7,6 +7,7 @@ package metrictest_test
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -75,5 +76,52 @@ func TestRecorder_ConsumerInitPath(t *testing.T) {
 	// The consumer's own shutdown path keeps working.
 	if err := provider.Shutdown(ctx); err != nil {
 		t.Fatalf("shutdown: %v", err)
+	}
+}
+
+// TestRecorder_ConsumerGaugeAccessors mirrors the Dashboard's process.uptime
+// test: an observable gauge that must be positive and strictly increasing
+// between two collections, read without touching metricdata types.
+func TestRecorder_ConsumerGaugeAccessors(t *testing.T) {
+	ctx := context.Background()
+	rec := metrictest.NewRecorder(t)
+
+	provider, err := initMetrics(ctx, "dash-1", "v5.9.0", rec.Option())
+	if err != nil {
+		t.Fatalf("initMetrics: %v", err)
+	}
+
+	// Deterministic stand-in for time.Since(start): grows on every collection.
+	var ticks atomic.Int64
+	_, err = provider.NewObservableGauge("process.uptime", "Process uptime", "s",
+		func(_ context.Context, observe metric.Float64Observer) error {
+			observe(float64(ticks.Add(1)) * 0.5)
+			return nil
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	first := metrictest.GaugeValue[float64](t, rec.FindMetric(t, "process.uptime"))
+	if first <= 0 {
+		t.Fatalf("uptime = %v, want > 0", first)
+	}
+
+	second := metrictest.GaugeValue[float64](t, rec.FindMetric(t, "process.uptime"))
+	if second <= first {
+		t.Fatalf("uptime did not increase between collections: %v then %v", first, second)
+	}
+
+	// Per-data-point values for a counter split by attribute.
+	requests, err := provider.NewCounter("http.requests", "Requests", "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	requests.Add(ctx, 3, attribute.String("method", "GET"))
+	requests.Add(ctx, 5, attribute.String("method", "POST"))
+
+	values := metrictest.DataPointValues[int64](t, rec.FindMetric(t, "http.requests"))
+	if len(values) != 2 || values[0]+values[1] != 8 {
+		t.Fatalf("request data points = %v, want two values summing to 8", values)
 	}
 }

@@ -129,11 +129,25 @@
 // involved, and the reader implies the provider is enabled regardless of
 // cfg.Enabled.
 //
+// # Reading Values
+//
+// When an exact match is the wrong assertion (uptime, timestamps, counts that
+// only need to grow), read the value out and compare it yourself. Neither
+// accessor requires importing metricdata:
+//
+//	first := metrictest.GaugeValue[float64](t, rec.FindMetric(t, "process.uptime"))
+//	second := metrictest.GaugeValue[float64](t, rec.FindMetric(t, "process.uptime"))
+//	assert.Greater(t, first, 0.0)
+//	assert.Greater(t, second, first)
+//
+//	// One value per attribute combination for counters and multi-point gauges.
+//	values := metrictest.DataPointValues[int64](t, tp.FindMetric(t, "http.requests"))
+//
 // # Resource Assertions
 //
 // Both TestProvider and Recorder expose the provider's resource:
 //
-//	attrs := tp.ResourceAttributes() // map[string]string, values via attribute.Value.Emit
+//	attrs := tp.ResourceAttributes() // map[string]string; numbers and bools as literals, slices as JSON arrays
 //	metrictest.AssertResourceAttributes(t, tp.Collect(), attribute.String("service.name", "tyk"))
 //	m := metrictest.ResourceAttributeMap(tp.Collect())
 //
